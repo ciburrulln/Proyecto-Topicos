@@ -1,9 +1,5 @@
 if(!require("pacman")){install.packages("pacman")}; library(pacman)
-pacman::p_load(here)
-
-
-
-pacman::p_load(here)
+pacman::p_load(here, tidyverse, lubridate)
 
 # Verificar directorio raíz del proyecto
 here()
@@ -14,3 +10,5 @@ pm25_diario <- read.csv(here("datos", "pm25_diario.csv"))
 diccionario <- read.csv(here("datos", "diccionario.csv"))
 
 sitios <- read.csv(here("datos", "sitios.csv"))
+
+
