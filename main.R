@@ -2,6 +2,8 @@ if(!require("pacman")){install.packages("pacman")}; library(pacman)
 pacman::p_load(here, tidyverse, lubridate)
 library(dplyr)
 
+#### CARGAR BASES DE DATOS ####
+
 # Verificar directorio raíz del proyecto
 here()
 
@@ -12,6 +14,8 @@ diccionario <- read.csv(here("datos", "diccionario.csv"))
 
 sitios <- read.csv(here("datos", "sitios.csv"))
 
+#### LIMPIEZA DE VARIABLES ####
+
 # Variables constantes
 sapply(pm25_diario, function(x) length(unique(x)) == 1)
 
@@ -19,8 +23,9 @@ sapply(pm25_diario, function(x) length(unique(x)) == 1)
 # y solo estamos calculando pm25. Además Date of Last Change no entrega
 # información relevante
 pm25_diario <- pm25_diario %>%
-  select(-State.Code, -Parameter.Code, -Parameter.Name, -Units.of.Measure,
-         -State.Name, -Date.of.Last.Change)
+  select(-State.Code, -State.Name, 
+         -Parameter.Code, -Parameter.Name, -Units.of.Measure,
+         -Date.of.Last.Change)
 
 # Eliminar variables con fuga de información, en este caso eliminamos 
 # las variables que registran el valor máximo durante ese día,
@@ -45,4 +50,9 @@ pm25_diario <- pm25_diario %>%
 names(pm25_diario)
 
 # County.Code y Site.Num son las variables que identifican la estación,
-# no se debe usar como predictor
+# no se deben usar como predictor
+
+#### LIMPIEZA DE OBSERVACIONES ####
+
+# Ver las combinaciones más comunes de instrumento, duración y estándar
+table(pm25_diario$POC, pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
