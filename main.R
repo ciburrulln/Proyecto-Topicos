@@ -48,7 +48,9 @@ pm25_diario <- pm25_diario %>%
 # POC, Sample Duration, Pollutant Standard se eliminarán posteriormente
 
 # County.Code y Site.Num son las variables que identifican la estación,
-# no se deben usar como predictor
+# el date local da justo la observación de
+# una fecha específica en una estación
+
 
 # Darle a la fecha formato de fecha
 # Crear variable para identificar las estaciones
@@ -68,6 +70,22 @@ names(pm25_diario)
 
 # Ver las combinaciones más comunes de instrumento, duración y estándar
 # Preocuparse de no promediar indiscriminadamente resúmenes incompatibles
+
+names(pm25_diario)
+
+table(pm25_diario$POC, pm25_diario$Sample.Duration, pm25_diario$Method.Code)
+
+table(pm25_diario$POC, pm25_diario$Sample.Duration)
+table(pm25_diario$POC, pm25_diario$Method.Code)
+table(pm25_diario$Sample.Duration, pm25_diario$Method.Code)
+
+
+table(pm25_diario$POC)
+table(pm25_diario$Sample.Duration)
+table(pm25_diario$Method.Code)
+
+
+
 # Separar la data para decidir qué elegir por estación sin usar la data del 2022
 # Solo usaremos 2019, 2020 y 2021
 
@@ -75,44 +93,3 @@ inicio <- as.Date("2019-01-01")
 fin <- as.Date("2021-12-31")
 
 total_dias <- as.integer(fin - inicio) + 1
-
-cobertura_poc <- pm25 %>%
-  filter(
-    fecha >= inicio,
-    fecha <= fin,
-    !is.na(Arithmetic.Mean)
-  ) %>%
-  group_by(County.Code, Site.Num, POC) %>%
-  summarise(
-    dias_observados = n_distinct(fecha),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    pct_cobertura = 100 * dias_observados / total_dias
-  )
-
-View(cobertura_poc)
-dim(cobertura_poc)
-cobertura_poc %>%
-  summarise(
-    n_estaciones = n_distinct(County.Code, Site.Num),
-    n_poc = n()
-  )
-
-
-names(pm25_diario)
-
-table(pm25_diario$POC, pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
-
-table(pm25_diario$POC, pm25_diario$Sample.Duration)
-table(pm25_diario$POC, pm25_diario$Pollutant.Standard)
-table(pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
-
-
-table(pm25_diario$POC)
-table(pm25_diario$Sample.Duration)
-table(pm25_diario$Pollutant.Standard)
-
-# County.Code con Site.Num son el id y el date local da justo la observación de 
-# una fecha específica en una estación
-
