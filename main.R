@@ -41,9 +41,9 @@ pm25_diario <- pm25_diario %>%
 # La exigencia de elegir una combinación coherente recae sobre el 
 # instrumento (POC), la duración y el estándar de la norma, 
 # no sobre el nombre comercial del método.
-# LA IA ME DIJO QUE BORRARA ESTO!
-pm25_diario <- pm25_diario %>%
-  select(-Method.Code, -Method.Name)
+# LA IA ME DIJO QUE BORRARA ESTO! PERO NO QUIERO
+# pm25_diario <- pm25_diario %>%
+  # select(-Method.Code, -Method.Name)
 
 # POC, Sample Duration, Pollutant Standard se eliminarán posteriormente
 
@@ -57,6 +57,8 @@ names(pm25_diario)
 # Ver las combinaciones más comunes de instrumento, duración y estándar
 # Preocuparse de no promediar indiscriminadamente resúmenes incompatibles
 
+names(pm25_diario)
+
 table(pm25_diario$POC, pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
 
 table(pm25_diario$POC, pm25_diario$Sample.Duration)
@@ -64,13 +66,35 @@ table(pm25_diario$POC, pm25_diario$Pollutant.Standard)
 table(pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
 
 
-
-
 table(pm25_diario$POC)
 table(pm25_diario$Sample.Duration)
 table(pm25_diario$Pollutant.Standard)
 
+# County.Code con Site.Num son el id y el date local da justo la observación de 
+# una fecha específica en una estación
 
+duplicados <- pm25_diario %>%
+  group_by(County.Code, Site.Num, Date.Local) %>% 
+  summarise(
+    n = n(),
+    n_poc = n_distinct(POC),
+    n_duracion = n_distinct(Sample.Duration),
+    .groups = "drop"
+  ) %>%
+  filter(n > 1)
 
+table(duplicados$n)
+# Todas las estaciones tienen más de un registro al día
+
+resumen_poc <- pm25_diario %>%
+  group_by(
+    County.Code, Site.Num,
+    POC, Sample.Duration
+  ) %>%
+  summarise(
+    n_dias = n_distinct(Date.Local),
+    .groups = "drop"
+  ) %>%
+  arrange(County.Code, Site.Num, desc(n_dias))
 
 
