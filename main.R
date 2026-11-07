@@ -55,4 +55,22 @@ names(pm25_diario)
 #### LIMPIEZA DE OBSERVACIONES ####
 
 # Ver las combinaciones más comunes de instrumento, duración y estándar
+# Preocuparse de no promediar indiscriminadamente resúmenes incompatibles
+
 table(pm25_diario$POC, pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
+
+table(pm25_diario$POC, pm25_diario$Sample.Duration)
+table(pm25_diario$POC, pm25_diario$Pollutant.Standard)
+table(pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
+
+
+
+
+table(pm25_diario$POC)
+table(pm25_diario$Sample.Duration)
+table(pm25_diario$Pollutant.Standard)
+
+
+
+
+
