@@ -1,0 +1,185 @@
+if(!require("pacman")){install.packages("pacman")}; library(pacman)
+pacman::p_load(here, tidyverse, lubridate, tidyr)
+library(dplyr)
+
+#### CARGAR BASES DE DATOS ####
+
+# Verificar directorio raíz del proyecto
+here()
+
+# Cargar bases de datos
+pm25_diario <- read.csv(here("datos", "pm25_diario.csv"))
+
+diccionario <- read.csv(here("datos", "diccionario.csv"))
+
+sitios <- read.csv(here("datos", "sitios.csv"))
+
+#### LIMPIEZA DE VARIABLES ####
+
+# Variables constantes
+sapply(pm25_diario, function(x) length(unique(x)) == 1)
+
+# Eliminar las variables redundantes pues todas las mediciones son en California
+# y solo estamos calculando pm25. Además Date of Last Change no entrega
+# información relevante
+pm25_diario <- pm25_diario %>%
+  select(-State.Code, -State.Name, 
+         -Parameter.Code, -Parameter.Name, -Units.of.Measure,
+         -Date.of.Last.Change)
+
+# Eliminar variables con fuga de información, en este caso eliminamos 
+# las variables que registran el valor máximo durante ese día,
+# la hora local a la que ocurrió y el índice de calidad de aire
+pm25_diario <- pm25_diario %>%
+  select(-X1st.Max.Value, -X1st.Max.Hour, -AQI)
+
+# Información que ya existe en sitios.cvs y la cruzaremos posteriormente
+pm25_diario <- pm25_diario %>%
+  select(-Latitude, -Longitude, -Datum, -Local.Site.Name, -Address, 
+         -County.Name, -City.Name, -CBSA.Name)
+
+# La exigencia de elegir una combinación coherente recae sobre el 
+# instrumento (POC), la duración y el estándar de la norma, 
+# no sobre el nombre comercial del método.
+# LA IA ME DIJO QUE BORRARA ESTO! PERO NO QUIERO
+# pm25_diario <- pm25_diario %>%
+  # select(-Method.Code, -Method.Name)
+
+# POC, Sample Duration, Pollutant Standard se eliminarán posteriormente
+
+names(pm25_diario)
+
+# County.Code y Site.Num son las variables que identifican la estación,
+# no se deben usar como predictor
+
+#### LIMPIEZA DE OBSERVACIONES ####
+
+# Ver las combinaciones más comunes de instrumento, duración y estándar
+# Preocuparse de no promediar indiscriminadamente resúmenes incompatibles
+
+names(pm25_diario)
+
+table(pm25_diario$POC, pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
+
+table(pm25_diario$POC, pm25_diario$Sample.Duration)
+table(pm25_diario$POC, pm25_diario$Pollutant.Standard)
+table(pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
+
+
+table(pm25_diario$POC)
+table(pm25_diario$Sample.Duration)
+table(pm25_diario$Pollutant.Standard)
+
+# County.Code con Site.Num son el id y el date local da justo la observación de 
+# una fecha específica en una estación
+
+duplicados <- pm25_diario %>%
+  group_by(County.Code, Site.Num, Date.Local) %>% 
+  summarise(
+    n = n(),
+    n_poc = n_distinct(POC),
+    n_duracion = n_distinct(Sample.Duration),
+    .groups = "drop"
+  ) %>%
+  filter(n > 1)
+
+table(duplicados$n)
+# Todas las estaciones tienen más de un registro al día
+
+resumen_poc <- pm25_diario %>%
+  group_by(
+    County.Code, Site.Num,
+    POC, Sample.Duration
+  ) %>%
+  summarise(
+    n_dias = n_distinct(Date.Local),
+    .groups = "drop"
+  ) %>%
+  arrange(County.Code, Site.Num, desc(n_dias))
+
+pm25_diario %>%
+  group_by(County.Code, Site.Num) %>%
+  summarise(
+    POC_disponibles = paste(sort(unique(POC)), collapse = ", "),
+    n_poc = n_distinct(POC),
+    .groups = "drop"
+  ) %>%
+  View()
+
+# Días sin medición -------------------------------------------------------
+
+grilla_completa <- pm25_diario %>%
+  mutate(
+    Date.Local = as.Date(Date.Local),
+    station = paste(County.Code, Site.Num, sep = "-")
+  ) %>%
+  group_by(station, Date.Local, County.Code, Site.Num) %>%
+  summarise(Arithmetic.Mean = mean(Arithmetic.Mean, na.rm = TRUE), .groups = "drop") %>%
+  group_by(station) %>%
+  # Rellena todos los días calendario faltantes entre el inicio y fin de cada estación
+  complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
+  ungroup()
+
+# 2. Contar los días sin medición (NA) por estación
+conteo_faltantes <- grilla_completa %>%
+  group_by(station) %>%
+  summarise(
+    dias_totales       = n(),
+    dias_con_medicion  = sum(!is.na(Arithmetic.Mean)),
+    dias_sin_medicion  = sum(is.na(Arithmetic.Mean)),
+    porcentaje_faltante = round((dias_sin_medicion / dias_totales) * 100, 2)
+  ) %>%
+  arrange(desc(dias_sin_medicion)) # Ordena de la estación con más baches a la que menos tiene
+
+# Ver la tabla resumen
+print(conteo_faltantes)
+##son maximo 100 dias sin medición 101/2091 = 0.04607664 -> 4% máximo
+
+#########identificador único por estación
+pm25_diario <- pm25_diario %>%
+  mutate(Date.Local = as.Date(Date.Local),
+         station = paste(County.Code, Site.Num, sep = "-"))
+
+##elegir 1 solo valor -> eliminar duplicados parte ceci
+##DUPLICADOS
+pm25_diario_unico <- pm25_diario %>%
+  group_by(station, Date.Local, County.Code, Site.Num) %>%
+  summarise(
+    Arithmetic.Mean = mean(Arithmetic.Mean, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#Los días sin datos ahora quedan como NA
+pm25_serie_tiempo <- pm25_diario_unico %>%
+  group_by(station) %>%
+  complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
+  fill(County.Code, Site.Num, .direction = "downup") %>%
+  arrange(station, Date.Local) %>%
+  #Rezagos
+  mutate(
+    pm25_hoy    = Arithmetic.Mean,
+    pm25_lag1   = lag(pm25_hoy, 1),   # Estrictamente el día calendario anterior (o NA si faltaba)
+    pm25_lag7   = lag(pm25_hoy, 7),   # Estrictamente 7 días calendario atrás
+    pm25_futuro = lead(pm25_hoy, 1)   # Estrictamente el día calendario siguiente
+  ) %>%
+  ungroup()
+
+sum(is.na(pm25_serie_tiempo$pm25_hoy)) #NAs totales
+##NAs por estación (repartidos)
+conteo_por_estacion <- pm25_serie_tiempo %>%
+  group_by(station) %>%
+  summarise(dias_faltantes = sum(is.na(pm25_hoy)))
+
+view(conteo_por_estacion)
+##################FALTAN PARTICIONES#########################
+
+##ejemplo en de una estación en específico
+pm25_serie_tiempo %>%
+  filter(station == "1-9") %>% # Cambia esto por un ID de tu base
+  select(Date.Local, pm25_hoy, pm25_lag1, pm25_lag7, pm25_futuro) %>%
+  head(15)
+
+
+###---------------------------------------------------------------------
+
+
