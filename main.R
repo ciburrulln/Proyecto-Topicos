@@ -97,4 +97,12 @@ resumen_poc <- pm25_diario %>%
   ) %>%
   arrange(County.Code, Site.Num, desc(n_dias))
 
+pm25_diario %>%
+  group_by(County.Code, Site.Num) %>%
+  summarise(
+    POC_disponibles = paste(sort(unique(POC)), collapse = ", "),
+    n_poc = n_distinct(POC),
+    .groups = "drop"
+  ) %>%
+  View()
 
