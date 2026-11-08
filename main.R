@@ -278,16 +278,16 @@ pm25_diario <- pm25_final
 
 # Días sin medición -------------------------------------------------------
 
-grilla_completa <- pm25_diario %>%
+pm25_diario <- pm25_diario %>%
   group_by(Station) %>%
   # Rellena todos los días calendario faltantes entre el inicio y fin de cada estación
   complete(Date.Local = seq.Date(min(as.Date("2019-01-01"), na.rm = TRUE), max(as.Date("2024-12-31"), na.rm = TRUE), by = "day")) %>%
   ungroup()
 
-apply(is.na(grilla_completa), 2, sum)
+apply(is.na(pm25_diario), 2, sum)
 
 # 2. Contar los días sin medición (NA) por estación
-conteo_faltantes <- grilla_completa %>%
+conteo_faltantes <- pm25_diario %>%
   group_by(Station) %>%
   summarise(
     dias_totales       = n(),
@@ -316,9 +316,10 @@ pm25_diario <- pm25_diario %>%
   ) %>%
   ungroup()
 
-sum(is.na(pm25_serie_tiempo$pm25_hoy)) #NAs totales
+sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia
+
 ##NAs por estación (repartidos)
-conteo_por_estacion <- pm25_serie_tiempo %>%
+conteo_por_estacion <- pm25_diario %>%
   group_by(Station) %>%
   summarise(dias_faltantes = sum(is.na(pm25_hoy)))
 
@@ -330,13 +331,44 @@ pm25_diario %>%
   select(Date.Local, pm25_hoy, pm25_lag1, pm25_lag7, pm25_futuro) %>%
   head(15)
 
+
+##fechas NA
+pm25_diario_NA <- pm25_diario %>% filter(is.na(pm25_hoy))
+pm25_diario_NA
+
+names(pm25_diario)
+
 #PARTICIONES-----------------------------------------------------------------
 
 entrenamiento <- pm25_diario %>% filter(Date.Local >= "2019-01-01" & Date.Local <= "2021-12-31")
 validacion   <- pm25_diario %>% filter(Date.Local >= "2022-01-01" & Date.Local <= "2022-12-31")
 reserva    <- pm25_diario %>% filter(Date.Local >= "2023-01-01" & Date.Local <= "2024-12-31")
 
-
-modelo_lm <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7,
-  data = entrenamiento)
+pm25_diario
+modelo_lm <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7, data = entrenamiento)
 summary(modelo_lm)
+names(pm25_diario)
+
+#lm con tipo de evento -> es significativo pero no aporta??
+modelo_lm1 <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7 + Event.Type , data = entrenamiento)
+summary(modelo_lm1)
+
+#PARA EL PRIMER MODELO
+real <- pm25_diario$pm25_futuro
+pred <- predict(modelo_lm)
+
+mae  <- function(real, pred) mean(abs(real - pred), na.rm = TRUE)
+rmse <- function(real, pred) sqrt(mean((real - pred)^2, na.rm = TRUE))
+
+##TIENEN DISTINTA LONGITUD real y pred -> POR LOS NA
+#mae de regresion lineal
+mae(real, pred)
+
+#rmse
+rmse(real, pred) #no cambia tanto -> no hay errores tan grandes 
+
+##boxcox no se puede pq hay NAs
+boxcox(modelo_lm)
+
+
+
