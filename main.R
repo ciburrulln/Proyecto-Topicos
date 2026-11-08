@@ -12,6 +12,7 @@ pm25_diario <- read.csv(here("datos", "pm25_diario.csv"))
 
 diccionario <- read.csv(here("datos", "diccionario.csv"))
 
+
 sitios <- read.csv(here("datos", "sitios.csv"))
 
 #### LIMPIEZA DE VARIABLES ####
@@ -331,7 +332,11 @@ pm25_serie_tiempo %>%
 
 #PARTICIONES-----------------------------------------------------------------
 
-entrenamiento <- pm25_diario %>% filter(fecha >= "2019-01-01" & fecha <= "2021-12-31")
-validacion   <- pm25_diario %>% filter(fecha >= "2022-01-01" & fecha <= "2022-12-31")
-reserva    <- pm25_diario %>% filter(fecha >= "2023-01-01" & fecha <= "2024-12-31")
+entrenamiento <- pm25_diario %>% filter(Date.Local >= "2019-01-01" & Date.Local <= "2021-12-31")
+validacion   <- pm25_diario %>% filter(Date.Local >= "2022-01-01" & Date.Local <= "2022-12-31")
+reserva    <- pm25_diario %>% filter(Date.Local >= "2023-01-01" & Date.Local <= "2024-12-31")
+
+
+modelo_lm <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7 + as.factor(estacion),
+  data = entrenamiento)
 
