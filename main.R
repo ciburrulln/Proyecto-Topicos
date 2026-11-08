@@ -72,8 +72,6 @@ pm25_diario <- pm25_diario %>%
 
 names(pm25_diario)
 
-#### LIMPIEZA DE OBSERVACIONES ####
-
 # Casi todas las estaciones cuentan con la misma ventana de tiempo
 # La estación 47-3 no tiene días en el 2024, por lo que la borramos por simplicidad
 # Mientras a la estación 37-4008 le faltan solo 8 días para completar el año
@@ -87,6 +85,9 @@ info_estacion <- pm25_diario %>%
             total_dias = n_distinct(Date.Local),
             total_observaciones = n(),
             NAS = dias_totales - total_dias)
+
+estacion473 <- pm25_diario %>%
+  dplyr::filter(Station == "47-3")
 
 pm25_diario <- pm25_diario %>%
   dplyr::filter(Station != "47-3")
@@ -117,11 +118,13 @@ combinaciones <- pm25_diario %>%
   ) %>%
   arrange(Station, desc(n_fechas))
 
+# Vemos que cada estación tiene más de una forma de medir la contaminación, por
+# lo que debemos elegir una para que sea comparable nuestra predicción
+
 #### ELEGIR MEJOR COMBINACIÓN ####
 # Solo entre los años 2019-2022
 
-#### ELEGIR MEJOR COMBINACION ####
-
+# las mediciones de menos de 18 horas no son significativas
 pm25_filtrado <- pm25_diario %>%
   filter(
     (Sample.Duration == "1 HOUR" & Observation.Count >= 18) |
@@ -135,20 +138,16 @@ mejor_combinacion_filtrada <- pm25_filtrado %>%
     .groups = "drop_last" # No sé pq pone eso
   ) %>%
   # Ordenar para que la con más cobertura quede en primera fila
-  arrange(Station, desc(dias_observados))  %>%
-  slice_head(n = 1) %>%
-  ungroup()
+  arrange(Station, desc(dias_observados)) 
 
 mejor_combinacion <- pm25_diario %>%
   group_by(Station, POC, Sample.Duration, Method.Code) %>%
   summarise(
     dias_observados = n(),
-    .groups = "drop" # No sé pq pone eso
+    .groups = "drop_last" # No sé pq pone eso
   ) %>%
   # Ordenar para que la con más cobertura quede en primera fila
-  arrange(Station, desc(dias_observados))  %>%
-  slice_head(n = 1) %>%
-  ungroup()
+  arrange(Station, desc(dias_observados)) 
 
 # Se observa que los promedios de bloque de 24 horas (24 HRS BLK AVG) coinciden en cantidad
 # con los promedios horarios (1 HR), si eliminamos las muestras donde con la
@@ -157,6 +156,8 @@ mejor_combinacion <- pm25_diario %>%
 # Por lo que basta analizar la mejor combinación solo con uno de los dos.
 # Nos quedamos con 1HR con las observaciones con más de 18 horas para calcular el promedio
 # dado que conserva más decimales en Arithmetic.Mean
+
+table(pm25_diario$Observation.Count, pm25_diario$Sample.Duration)
 
 pm25_diario <- pm25_diario %>%
   filter(
@@ -262,3 +263,84 @@ info_estacion_final <- pm25_final %>%
             total_dias = n_distinct(Date.Local),
             total_observaciones = n(),
             NAS = dias_totales - total_dias)
+
+
+#### IMPUTAR ####
+
+# Días sin medición -------------------------------------------------------
+
+grilla_completa <- pm25_diario %>%
+  mutate(
+    Date.Local = as.Date(Date.Local),
+    station = paste(County.Code, Site.Num, sep = "-")
+  ) %>%
+  group_by(station, Date.Local, County.Code, Site.Num) %>%
+  summarise(Arithmetic.Mean = mean(Arithmetic.Mean, na.rm = TRUE), .groups = "drop") %>%
+  group_by(station) %>%
+  # Rellena todos los días calendario faltantes entre el inicio y fin de cada estación
+  complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
+  ungroup()
+
+# 2. Contar los días sin medición (NA) por estación
+conteo_faltantes <- grilla_completa %>%
+  group_by(station) %>%
+  summarise(
+    dias_totales       = n(),
+    dias_con_medicion  = sum(!is.na(Arithmetic.Mean)),
+    dias_sin_medicion  = sum(is.na(Arithmetic.Mean)),
+    porcentaje_faltante = round((dias_sin_medicion / dias_totales) * 100, 2)
+  ) %>%
+  arrange(desc(dias_sin_medicion)) # Ordena de la estación con más baches a la que menos tiene
+
+# Ver la tabla resumen
+print(conteo_faltantes)
+##son maximo 100 dias sin medición 101/2091 = 0.04607664 -> 4% máximo
+
+#########identificador único por estación
+pm25_diario <- pm25_diario %>%
+  mutate(Date.Local = as.Date(Date.Local),
+         station = paste(County.Code, Site.Num, sep = "-"))
+
+##elegir 1 solo valor -> eliminar duplicados parte ceci
+##DUPLICADOS
+pm25_diario_unico <- pm25_diario %>%
+  group_by(station, Date.Local, County.Code, Site.Num) %>%
+  summarise(
+    Arithmetic.Mean = mean(Arithmetic.Mean, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#Los días sin datos ahora quedan como NA
+pm25_serie_tiempo <- pm25_diario_unico %>%
+  group_by(station) %>%
+  complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
+  fill(County.Code, Site.Num, .direction = "downup") %>%
+  arrange(station, Date.Local) %>%
+  #Rezagos
+  mutate(
+    pm25_hoy    = Arithmetic.Mean,
+    pm25_lag1   = lag(pm25_hoy, 1),   # Estrictamente el día calendario anterior (o NA si faltaba)
+    pm25_lag7   = lag(pm25_hoy, 7),   # Estrictamente 7 días calendario atrás
+    pm25_futuro = lead(pm25_hoy, 1)   # Estrictamente el día calendario siguiente
+  ) %>%
+  ungroup()
+
+sum(is.na(pm25_serie_tiempo$pm25_hoy)) #NAs totales
+##NAs por estación (repartidos)
+conteo_por_estacion <- pm25_serie_tiempo %>%
+  group_by(station) %>%
+  summarise(dias_faltantes = sum(is.na(pm25_hoy)))
+
+view(conteo_por_estacion)
+##################FALTAN PARTICIONES#########################
+
+##ejemplo en de una estación en específico
+pm25_serie_tiempo %>%
+  filter(station == "1-9") %>% # Cambia esto por un ID de tu base
+  select(Date.Local, pm25_hoy, pm25_lag1, pm25_lag7, pm25_futuro) %>%
+  head(15)
+
+
+###---------------------------------------------------------------------
+
+
