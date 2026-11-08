@@ -62,8 +62,6 @@ pm25_diario <- pm25_diario %>%
   select(-County.Code, -Site.Num) %>%
   mutate(Arithmetic.Mean = as.numeric(Arithmetic.Mean))
 
-names(pm25_diario)
-
 
 
 
@@ -86,13 +84,14 @@ table(pm25_diario$Sample.Duration)
 table(pm25_diario$Method.Code)
 
 # Todas las estaciones cuentan con la misma ventana de tiempo
-dias_totales <- as.numeric(max(pm25_diario$Date.Local) - min(pm25_diario$Date.Local)) + 1
-
+dias_totales <- as.numeric(max(pm25_diario$Date.Local) - 
+                             min(pm25_diario$Date.Local)) + 1
 info_estacion <- pm25_diario %>%
   group_by(Station) %>%
   summarise(min = min(Date.Local),
             max = max(Date.Local),
             total_dias = n_distinct(Date.Local),
+            total_observaciones = n(),
             NAS = dias_totales - total_dias)
 
 # Todas las estaciones tienen más de una máquina 
@@ -126,6 +125,8 @@ mejor_combinacion <- pm25_diario %>%
   # Aquí priorizamos cantidad calidad de observación por encima de los días observados.
   arrange(Station, desc(calidad_promedio), desc(dias_observados))
 
+# Analizar si las diferencias entre los diferentes metodos para calcular son comparables
+
 unoonce <- pm25_diario %>%
   filter(
     Station == "1-11"
@@ -134,6 +135,26 @@ unoonce <- pm25_diario %>%
   pivot_wider(
     names_from = Sample.Duration,
     values_from = Arithmetic.Mean) 
+names(unoonce)
 
 unoonce <- unoonce %>%
-  summarise(dif = '1 HOUR' - '24-HR BLK AVG')
+  mutate(dif = `1 HOUR` - `24-HR BLK AVG`)
+
+
+#### SEPARAR LAS ESTACIONES ####
+serie_por_estacion <- function(estacion){
+  serie_estacion <- pm25_diario %>%
+    dplyr::filter(Station == estacion)
+  return(serie_estacion)
+}
+
+lista_nombre_estaciones <- unique(pm25_diario$Station)
+
+lista_estaciones <- list()
+
+for(estacion in lista_nombre_estaciones) {
+  lista_estaciones[[estacion]] <- serie_por_estacion(estacion)
+}
+
+
+
