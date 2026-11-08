@@ -59,9 +59,12 @@ pm25_diario <- pm25_diario %>%
     Station = paste(County.Code, Site.Num, sep = "-")
   ) %>%
   relocate(Station, Method.Code) %>%
-  select(-County.Code, -Site.Num)
+  select(-County.Code, -Site.Num) %>%
+  mutate(Arithmetic.Mean = as.numeric(Arithmetic.Mean))
 
 names(pm25_diario)
+
+
 
 
 #### LIMPIEZA DE OBSERVACIONES ####
@@ -123,4 +126,14 @@ mejor_combinacion <- pm25_diario %>%
   # Aquí priorizamos cantidad calidad de observación por encima de los días observados.
   arrange(Station, desc(calidad_promedio), desc(dias_observados))
 
+unoonce <- pm25_diario %>%
+  filter(
+    Station == "1-11"
+  ) %>%
+  select(Date.Local, Sample.Duration, Arithmetic.Mean) %>%
+  pivot_wider(
+    names_from = Sample.Duration,
+    values_from = Arithmetic.Mean) 
 
+unoonce <- unoonce %>%
+  summarise(dif = '1 HOUR' - '24-HR BLK AVG')
