@@ -210,3 +210,55 @@ info_estacion_final <- pm25_final %>%
             total_dias = n_distinct(Date.Local),
             total_observaciones = n(),
             NAS = dias_totales - total_dias)
+
+#### Revisar estación 31-1004 ####
+
+pm25_diario %>%
+  filter(Station == "31-1004") %>%
+  group_by(POC, Sample.Duration, Method.Code) %>%
+  summarise(
+    inicio = min(Date.Local),
+    fin = max(Date.Local),
+    dias = n_distinct(Date.Local),
+    .groups = "drop"
+  )
+# Hubo cambio de Método el 2020!
+
+# Recuperar las observaciones del método anterior
+observaciones_recuperadas <- pm25_diario %>%
+  filter(
+    Station == "31-1004",
+    POC == 3,
+    Sample.Duration == "1 HOUR",
+    Method.Code == 204
+  ) %>%
+  anti_join(
+    pm25_final %>%
+      distinct(Station, Date.Local),
+    by = c("Station", "Date.Local")
+  )
+
+# Incorporarlas a la base final
+pm25_final <- bind_rows(
+  pm25_final,
+  observaciones_recuperadas
+) %>%
+  arrange(
+    as.integer(sub("-.*", "", Station)),
+    as.integer(sub(".*-", "", Station)),
+    Date.Local
+  )
+
+# Verificar que no existan duplicados
+pm25_final %>%
+  count(Station, Date.Local) %>%
+  filter(n > 1)
+
+# Analizamos nuevamente la info de cada estacion 
+info_estacion_final <- pm25_final %>%
+  group_by(Station) %>%
+  summarise(min = min(Date.Local),
+            max = max(Date.Local),
+            total_dias = n_distinct(Date.Local),
+            total_observaciones = n(),
+            NAS = dias_totales - total_dias)
