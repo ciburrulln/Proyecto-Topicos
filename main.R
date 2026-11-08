@@ -163,7 +163,7 @@ pm25_diario <- pm25_diario %>%
     (Sample.Duration == "1 HOUR" & Observation.Count >= 18) |
       (Sample.Duration == "24 HOUR" & Observation.Count == 1) )
 
-#### ELEGIR MEJOR COMBINACION ####
+#### ELEGIR MEJOR COMBINACIÓN ####
 
 mejor_combinacion <- pm25_diario %>%
   filter(year(Date.Local) %in% 2019:2022) %>%
@@ -184,21 +184,29 @@ mejor_combinacion <- pm25_diario %>%
     as.integer(sub(".*-", "", Station))
   )
 
+#### ELIMINAR OBSERVACIONES DUPLICADAS USANDO LA MEJOR COMBINACIÓN ####
 
-#### SEPARAR LAS ESTACIONES ####
-serie_por_estacion <- function(estacion){
-  serie_estacion <- pm25_diario %>%
-    dplyr::filter(Station == estacion)
-  return(serie_estacion)
-}
+pm25_final <- pm25_diario %>%
+  semi_join(
+    mejor_combinacion,
+    by = c("Station", "POC", "Sample.Duration", "Method.Code")
+  ) %>%
+  arrange(
+    as.integer(sub("-.*", "", Station)),
+    as.integer(sub(".*-", "", Station)),
+    Date.Local
+  )
 
-lista_nombre_estaciones <- unique(pm25_diario$Station)
+# Verificar que no existan duplicados
+pm25_final %>%
+  count(Station, Date.Local) %>%
+  filter(n > 1)
 
-lista_estaciones <- list()
-
-for(estacion in lista_nombre_estaciones) {
-  lista_estaciones[[estacion]] <- serie_por_estacion(estacion)
-}
-
-
-
+# Analizamos nuevamente la info de cada estacion 
+info_estacion_final <- pm25_final %>%
+  group_by(Station) %>%
+  summarise(min = min(Date.Local),
+            max = max(Date.Local),
+            total_dias = n_distinct(Date.Local),
+            total_observaciones = n(),
+            NAS = dias_totales - total_dias)
