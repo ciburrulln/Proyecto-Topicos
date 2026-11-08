@@ -303,7 +303,7 @@ print(conteo_faltantes)
 
 
 #Los días sin datos ahora quedan como NA
-pm25_serie_tiempo <- pm25_diario %>%
+pm25_diario <- pm25_diario %>%
   group_by(Station) %>%
   complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
   arrange(Station, Date.Local) %>%
@@ -325,7 +325,7 @@ conteo_por_estacion <- pm25_serie_tiempo %>%
 view(conteo_por_estacion)
 
 ##ejemplo en de una estación en específico##############3
-pm25_serie_tiempo %>%
+pm25_diario %>%
   filter(Station == "1-9") %>% # Cambia esto por un ID de tu base
   select(Date.Local, pm25_hoy, pm25_lag1, pm25_lag7, pm25_futuro) %>%
   head(15)
@@ -337,6 +337,6 @@ validacion   <- pm25_diario %>% filter(Date.Local >= "2022-01-01" & Date.Local <
 reserva    <- pm25_diario %>% filter(Date.Local >= "2023-01-01" & Date.Local <= "2024-12-31")
 
 
-modelo_lm <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7 + as.factor(estacion),
+modelo_lm <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7,
   data = entrenamiento)
-
+summary(modelo_lm)
