@@ -322,15 +322,16 @@ conteo_por_estacion <- pm25_serie_tiempo %>%
   summarise(dias_faltantes = sum(is.na(pm25_hoy)))
 
 view(conteo_por_estacion)
-##################FALTAN PARTICIONES#########################
 
-##ejemplo en de una estación en específico
+##ejemplo en de una estación en específico##############3
 pm25_serie_tiempo %>%
   filter(Station == "1-9") %>% # Cambia esto por un ID de tu base
   select(Date.Local, pm25_hoy, pm25_lag1, pm25_lag7, pm25_futuro) %>%
   head(15)
 
+#PARTICIONES-----------------------------------------------------------------
 
-###---------------------------------------------------------------------
-
+entrenamiento <- pm25_diario %>% filter(fecha >= "2019-01-01" & fecha <= "2021-12-31")
+validacion   <- pm25_diario %>% filter(fecha >= "2022-01-01" & fecha <= "2022-12-31")
+reserva    <- pm25_diario %>% filter(fecha >= "2023-01-01" & fecha <= "2024-12-31")
 
