@@ -255,6 +255,7 @@ pm25_final %>%
   count(Station, Date.Local) %>%
   filter(n > 1)
 
+
 # Analizamos nuevamente la info de cada estacion 
 info_estacion_final <- pm25_final %>%
   group_by(Station) %>%
@@ -263,6 +264,11 @@ info_estacion_final <- pm25_final %>%
             total_dias = n_distinct(Date.Local),
             total_observaciones = n(),
             NAS = dias_totales - total_dias)
+
+
+
+
+
 
 pm25_diario <- pm25_final
 
@@ -274,7 +280,7 @@ pm25_diario <- pm25_final
 grilla_completa <- pm25_diario %>%
   group_by(Station) %>%
   # Rellena todos los días calendario faltantes entre el inicio y fin de cada estación
-  complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
+  complete(Date.Local = seq.Date(min(as.Date("2019-01-01"), na.rm = TRUE), max(as.Date("2024-12-31"), na.rm = TRUE), by = "day")) %>%
   ungroup()
 
 apply(is.na(grilla_completa), 2, sum)
@@ -294,25 +300,11 @@ conteo_faltantes <- grilla_completa %>%
 print(conteo_faltantes)
 ##son maximo 100 dias sin medición 101/2091 = 0.04607664 -> 4% máximo
 
-#########identificador único por estación
-pm25_diario <- pm25_diario %>%
-  mutate(Date.Local = as.Date(Date.Local),
-         Station = paste(County.Code, Site.Num, sep = "-"))
-
-##elegir 1 solo valor -> eliminar duplicados parte ceci
-##DUPLICADOS
-pm25_diario_unico <- pm25_diario %>%
-  group_by(Station, Date.Local, County.Code, Site.Num) %>%
-  summarise(
-    Arithmetic.Mean = mean(Arithmetic.Mean, na.rm = TRUE),
-    .groups = "drop"
-  )
 
 #Los días sin datos ahora quedan como NA
-pm25_serie_tiempo <- pm25_diario_unico %>%
+pm25_serie_tiempo <- pm25_diario %>%
   group_by(Station) %>%
   complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
-  fill(County.Code, Site.Num, .direction = "downup") %>%
   arrange(Station, Date.Local) %>%
   #Rezagos
   mutate(
