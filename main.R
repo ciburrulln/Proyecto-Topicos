@@ -43,7 +43,7 @@ pm25_diario <- pm25_diario %>%
          -County.Name, -City.Name, -CBSA.Name)
 
 
-# POC, Sample Duration, Pollutant Standard se eliminarán posteriormente
+# POC, Sample Duration y Method.Code se eliminarán posteriormente
 
 # County.Code y Site.Num son las variables que identifican la estación,
 # el date local da justo la observación de
@@ -72,18 +72,12 @@ pm25_diario <- pm25_diario %>%
 
 names(pm25_diario)
 
-table(pm25_diario$POC, pm25_diario$Sample.Duration, pm25_diario$Method.Code)
+#### LIMPIEZA DE OBSERVACIONES ####
 
-table(pm25_diario$POC, pm25_diario$Sample.Duration)
-table(pm25_diario$POC, pm25_diario$Method.Code)
-table(pm25_diario$Sample.Duration, pm25_diario$Method.Code)
-
-
-table(pm25_diario$POC)
-table(pm25_diario$Sample.Duration)
-table(pm25_diario$Method.Code)
-
-# Todas las estaciones cuentan con la misma ventana de tiempo
+# Casi todas las estaciones cuentan con la misma ventana de tiempo
+# La estación 47-3 no tiene días en el 2024, por lo que la borramos por simplicidad
+# Mientras a la estación 37-4008 le faltan solo 8 días para completar el año
+# NO SÉ QUE HACER ACÁ
 dias_totales <- as.numeric(max(pm25_diario$Date.Local) - 
                              min(pm25_diario$Date.Local)) + 1
 info_estacion <- pm25_diario %>%
@@ -93,6 +87,10 @@ info_estacion <- pm25_diario %>%
             total_dias = n_distinct(Date.Local),
             total_observaciones = n(),
             NAS = dias_totales - total_dias)
+
+pm25_diario <- pm25_diario %>%
+  dplyr::filter(Station != "47-3")
+
 
 # Todas las estaciones tienen más de una máquina 
 # o más de una forma de tomar las muestras, por lo que es importante
@@ -107,38 +105,84 @@ maquinas_por_estacion <- pm25_diario %>%
     combinaciones_totales = n_distinct(paste(POC, Sample.Duration, Method.Code))
   )
 
-# Cuenta las apariciones de cada combinación exacta en cada estación
-resumen_combinaciones <- pm25_diario %>%
-  count(Station, POC, Sample.Duration, Method.Code, name = "frecuencia") 
+#### IDENTIFICAR LAS COMBINACIONES ####
 
-
-mejor_combinacion <- pm25_diario %>%
-  # 1. Agrupar por la combinación exacta
+combinaciones <- pm25_diario %>%
   group_by(Station, POC, Sample.Duration, Method.Code) %>%
-  # 2. Calcular cuántos días operó y su porcentaje promedio de calidad diaria
+  summarise(
+    n_registros = n(),
+    n_fechas = n_distinct(Date.Local),
+    media_porcentaje_obs = mean(Observation.Percent),
+    .groups = "drop"
+  ) %>%
+  arrange(Station, desc(n_fechas))
+
+#### ELEGIR MEJOR COMBINACIÓN ####
+# Solo entre los años 2019-2022
+
+#### ELEGIR MEJOR COMBINACION ####
+
+pm25_filtrado <- pm25_diario %>%
+  filter(
+    (Sample.Duration == "1 HOUR" & Observation.Count >= 18) |
+      (Sample.Duration == "24 HOUR" & Observation.Count == 1) |
+      (Sample.Duration == "24-HR BLK AVG" & Observation.Count == 1))
+
+mejor_combinacion_filtrada <- pm25_filtrado %>%
+  group_by(Station, POC, Sample.Duration, Method.Code) %>%
   summarise(
     dias_observados = n(),
-    calidad_promedio = mean(Observation.Percent),
-    .groups = "drop_last" # Quita los instrumentos, queda agrupado solo por Station
+    .groups = "drop_last" # No sé pq pone eso
   ) %>%
-  # 3. Ordenar para que la "mejor" quede en la primera fila. 
-  # Aquí priorizamos cantidad calidad de observación por encima de los días observados.
-  arrange(Station, desc(calidad_promedio), desc(dias_observados))
+  # Ordenar para que la con más cobertura quede en primera fila
+  arrange(Station, desc(dias_observados))  %>%
+  slice_head(n = 1) %>%
+  ungroup()
 
-# Analizar si las diferencias entre los diferentes metodos para calcular son comparables
+mejor_combinacion <- pm25_diario %>%
+  group_by(Station, POC, Sample.Duration, Method.Code) %>%
+  summarise(
+    dias_observados = n(),
+    .groups = "drop" # No sé pq pone eso
+  ) %>%
+  # Ordenar para que la con más cobertura quede en primera fila
+  arrange(Station, desc(dias_observados))  %>%
+  slice_head(n = 1) %>%
+  ungroup()
 
-unoonce <- pm25_diario %>%
+# Se observa que los promedios de bloque de 24 horas (24 HRS BLK AVG) coinciden en cantidad
+# con los promedios horarios (1 HR), si eliminamos las muestras donde con la
+# duración 1HR se usan menos de 18 horas, solo se diferencian por el truncamiento 
+# a un decimal aplicado por la EPA.
+# Por lo que basta analizar la mejor combinación solo con uno de los dos.
+# Nos quedamos con 1HR con las observaciones con más de 18 horas para calcular el promedio
+# dado que conserva más decimales en Arithmetic.Mean
+
+pm25_diario <- pm25_diario %>%
   filter(
-    Station == "1-11"
-  ) %>%
-  select(Date.Local, Sample.Duration, Arithmetic.Mean) %>%
-  pivot_wider(
-    names_from = Sample.Duration,
-    values_from = Arithmetic.Mean) 
-names(unoonce)
+    (Sample.Duration == "1 HOUR" & Observation.Count >= 18) |
+      (Sample.Duration == "24 HOUR" & Observation.Count == 1) )
 
-unoonce <- unoonce %>%
-  mutate(dif = `1 HOUR` - `24-HR BLK AVG`)
+#### ELEGIR MEJOR COMBINACION ####
+
+mejor_combinacion <- pm25_diario %>%
+  filter(year(Date.Local) %in% 2019:2022) %>%
+  group_by(Station, POC, Sample.Duration, Method.Code) %>%
+  summarise(
+    dias_observados = n_distinct(Date.Local),
+    .groups = "drop"
+  ) %>%
+  group_by(Station) %>%
+  # Priorizar la combinación con más días
+  arrange(desc(dias_observados), .by_group = TRUE) %>%
+  # Elegir una combinación por estación
+  slice_head(n = 1) %>%
+  ungroup() %>%
+  # Ordenar las estaciones numéricamente
+  arrange(
+    as.integer(sub("-.*", "", Station)),
+    as.integer(sub(".*-", "", Station))
+  )
 
 
 #### SEPARAR LAS ESTACIONES ####
