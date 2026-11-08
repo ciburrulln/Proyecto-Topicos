@@ -264,26 +264,24 @@ info_estacion_final <- pm25_final %>%
             total_observaciones = n(),
             NAS = dias_totales - total_dias)
 
+pm25_diario <- pm25_final
+
 
 #### IMPUTAR ####
 
 # Días sin medición -------------------------------------------------------
 
 grilla_completa <- pm25_diario %>%
-  mutate(
-    Date.Local = as.Date(Date.Local),
-    station = paste(County.Code, Site.Num, sep = "-")
-  ) %>%
-  group_by(station, Date.Local, County.Code, Site.Num) %>%
-  summarise(Arithmetic.Mean = mean(Arithmetic.Mean, na.rm = TRUE), .groups = "drop") %>%
-  group_by(station) %>%
+  group_by(Station) %>%
   # Rellena todos los días calendario faltantes entre el inicio y fin de cada estación
   complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
   ungroup()
 
+apply(is.na(grilla_completa), 2, sum)
+
 # 2. Contar los días sin medición (NA) por estación
 conteo_faltantes <- grilla_completa %>%
-  group_by(station) %>%
+  group_by(Station) %>%
   summarise(
     dias_totales       = n(),
     dias_con_medicion  = sum(!is.na(Arithmetic.Mean)),
@@ -299,12 +297,12 @@ print(conteo_faltantes)
 #########identificador único por estación
 pm25_diario <- pm25_diario %>%
   mutate(Date.Local = as.Date(Date.Local),
-         station = paste(County.Code, Site.Num, sep = "-"))
+         Station = paste(County.Code, Site.Num, sep = "-"))
 
 ##elegir 1 solo valor -> eliminar duplicados parte ceci
 ##DUPLICADOS
 pm25_diario_unico <- pm25_diario %>%
-  group_by(station, Date.Local, County.Code, Site.Num) %>%
+  group_by(Station, Date.Local, County.Code, Site.Num) %>%
   summarise(
     Arithmetic.Mean = mean(Arithmetic.Mean, na.rm = TRUE),
     .groups = "drop"
@@ -312,10 +310,10 @@ pm25_diario_unico <- pm25_diario %>%
 
 #Los días sin datos ahora quedan como NA
 pm25_serie_tiempo <- pm25_diario_unico %>%
-  group_by(station) %>%
+  group_by(Station) %>%
   complete(Date.Local = seq.Date(min(Date.Local, na.rm = TRUE), max(Date.Local, na.rm = TRUE), by = "day")) %>%
   fill(County.Code, Site.Num, .direction = "downup") %>%
-  arrange(station, Date.Local) %>%
+  arrange(Station, Date.Local) %>%
   #Rezagos
   mutate(
     pm25_hoy    = Arithmetic.Mean,
@@ -328,7 +326,7 @@ pm25_serie_tiempo <- pm25_diario_unico %>%
 sum(is.na(pm25_serie_tiempo$pm25_hoy)) #NAs totales
 ##NAs por estación (repartidos)
 conteo_por_estacion <- pm25_serie_tiempo %>%
-  group_by(station) %>%
+  group_by(Station) %>%
   summarise(dias_faltantes = sum(is.na(pm25_hoy)))
 
 view(conteo_por_estacion)
@@ -336,7 +334,7 @@ view(conteo_por_estacion)
 
 ##ejemplo en de una estación en específico
 pm25_serie_tiempo %>%
-  filter(station == "1-9") %>% # Cambia esto por un ID de tu base
+  filter(Station == "1-9") %>% # Cambia esto por un ID de tu base
   select(Date.Local, pm25_hoy, pm25_lag1, pm25_lag7, pm25_futuro) %>%
   head(15)
 

@@ -57,18 +57,6 @@ names(pm25_diario)
 # Ver las combinaciones más comunes de instrumento, duración y estándar
 # Preocuparse de no promediar indiscriminadamente resúmenes incompatibles
 
-names(pm25_diario)
-
-table(pm25_diario$POC, pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
-
-table(pm25_diario$POC, pm25_diario$Sample.Duration)
-table(pm25_diario$POC, pm25_diario$Pollutant.Standard)
-table(pm25_diario$Sample.Duration, pm25_diario$Pollutant.Standard)
-
-
-table(pm25_diario$POC)
-table(pm25_diario$Sample.Duration)
-table(pm25_diario$Pollutant.Standard)
 
 # County.Code con Site.Num son el id y el date local da justo la observación de 
 # una fecha específica en una estación
