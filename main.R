@@ -12,7 +12,6 @@ pm25_diario <- read.csv(here("datos", "pm25_diario.csv"))
 
 diccionario <- read.csv(here("datos", "diccionario.csv"))
 
-
 sitios <- read.csv(here("datos", "sitios.csv"))
 
 #### LIMPIEZA DE VARIABLES ####
@@ -132,7 +131,7 @@ pm25_filtrado <- pm25_diario %>%
       (Sample.Duration == "24 HOUR" & Observation.Count == 1) |
       (Sample.Duration == "24-HR BLK AVG" & Observation.Count == 1))
 
-mejor_combinacion_filtrada <- pm25_filtrado %>%
+mejores_combinaciones_filtradas <- pm25_filtrado %>%
   group_by(Station, POC, Sample.Duration, Method.Code) %>%
   summarise(
     dias_observados = n(),
@@ -141,7 +140,7 @@ mejor_combinacion_filtrada <- pm25_filtrado %>%
   # Ordenar para que la con más cobertura quede en primera fila
   arrange(Station, desc(dias_observados)) 
 
-mejor_combinacion <- pm25_diario %>%
+mejores_combinaciones <- pm25_diario %>%
   group_by(Station, POC, Sample.Duration, Method.Code) %>%
   summarise(
     dias_observados = n(),
@@ -267,9 +266,61 @@ info_estacion_final <- pm25_final %>%
             NAS = dias_totales - total_dias)
 
 
+#### Revisar estación 65-8001 ####
+
+pm25_diario %>%
+  filter(Station == "65-8001") %>%
+  group_by(POC, Sample.Duration, Method.Code) %>%
+  summarise(
+    inicio = min(Date.Local),
+    fin = max(Date.Local),
+    dias = n_distinct(Date.Local),
+    .groups = "drop"
+  )
+# Hubo cambio de POC el 2022 para el método 1 HR (yo lo cambiaría)
+
+#### Revisar estación 71-27 ####
+
+pm25_diario %>%
+  filter(Station == "71-27") %>%
+  group_by(POC, Sample.Duration, Method.Code) %>%
+  summarise(
+    inicio = min(Date.Local),
+    fin = max(Date.Local),
+    dias = n_distinct(Date.Local),
+    .groups = "drop"
+  )
+# Hubo cambio de método el 2022 para la duración 1 HR 
+# PERO tiene más observaciones la duración 24 HRS
+# 2120 > 1909 (CASI 200 OBSERVACIONES MÁS)
 
 
+#### Revisar estación 37-4008 ####
 
+pm25_diario %>%
+  filter(Station == "37-4008") %>%
+  group_by(POC, Sample.Duration, Method.Code) %>%
+  summarise(
+    inicio = min(Date.Local),
+    fin = max(Date.Local),
+    dias = n_distinct(Date.Local),
+    .groups = "drop"
+  )
+# La duración 1 hr llega hasta el 2021, así que nos mantenemos
+
+#### Revisar estación 37-1103 ####
+
+pm25_diario %>%
+  filter(Station == "37-1103") %>%
+  group_by(POC, Sample.Duration, Method.Code) %>%
+  summarise(
+    inicio = min(Date.Local),
+    fin = max(Date.Local),
+    dias = n_distinct(Date.Local),
+    .groups = "drop"
+  )
+# La duración 24 hrs tiene más de 1000 observaciones más que 
+# la duración 1 hr
 
 pm25_diario <- pm25_final
 
