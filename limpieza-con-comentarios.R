@@ -84,8 +84,6 @@ info_estacion <- pm25_diario %>%
             total_observaciones = n(),
             dias_sin_medicion = dias_totales - total_dias)
 
-#estacion473 <- pm25_diario %>%
-#  dplyr::filter(Station == "47-3")
 
 pm25_diario <- pm25_diario %>%
   dplyr::filter(Station != "47-3")
@@ -273,7 +271,6 @@ pm25_diario <- pm25_diario %>%
   select(-Method.Code, -POC, -Sample.Duration,
          -Observation.Count, -Observation.Percent )
 
-
 #### ¿Por qué no usamos la duración 1 HR en estas 4 estaciones? ####
 
 #### Revisar estación 65-8001 ####
@@ -389,7 +386,6 @@ conteo_por_estacion <- pm25_diario %>%
   group_by(Station) %>%
   summarise(dias_faltantes = sum(is.na(pm25_hoy)))
 
-view(conteo_por_estacion)
 
 ## ejemplo en de una estación en específico##############
 
