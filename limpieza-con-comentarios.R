@@ -335,7 +335,7 @@ pm25_diario_original %>%
 
 
 
-#### IMPUTAR ####
+#### Agregar días ####
 
 # Días sin medición -------------------------------------------------------
 
