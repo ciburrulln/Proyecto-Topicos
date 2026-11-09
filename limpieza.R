@@ -84,8 +84,8 @@ info_estacion <- pm25_diario %>%
             total_observaciones = n(),
             dias_sin_medicion = dias_totales - total_dias)
 
-estacion473 <- pm25_diario %>%
-  dplyr::filter(Station == "47-3")
+#estacion473 <- pm25_diario %>%
+#  dplyr::filter(Station == "47-3")
 
 pm25_diario <- pm25_diario %>%
   dplyr::filter(Station != "47-3")
@@ -163,6 +163,7 @@ pm25_diario <- pm25_diario %>%
       (Sample.Duration == "24 HOUR" & Observation.Count == 1) )
 
 #### ELEGIR MEJOR COMBINACIÓN ####
+# Solo entre los años 2019-2022
 
 mejor_combinacion <- pm25_diario %>%
   filter(year(Date.Local) %in% 2019:2022) %>%
@@ -213,6 +214,7 @@ info_estacion_final <- pm25_diario %>%
             NAS = dias_totales - total_dias)
 
 #### Revisar estación 31-1004 ####
+# Estación con muchos días sin medición
 
 pm25_diario_original %>%
   filter(Station == "31-1004") %>%
@@ -223,7 +225,7 @@ pm25_diario_original %>%
     dias = n_distinct(Date.Local),
     .groups = "drop"
   )
-# Hubo cambio de Método el 2020!
+# Hubo cambio de Método el 2020! Por eso no contabilizó todo el periodo
 
 # Recuperar las observaciones del método anterior
 observaciones_recuperadas <- pm25_diario_original %>%
@@ -311,14 +313,15 @@ pm25_diario <- pm25_diario %>%
 
 sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia
 
-##NAs por estación (repartidos)
+## NAs por estación (repartidos)
 conteo_por_estacion <- pm25_diario %>%
   group_by(Station) %>%
   summarise(dias_faltantes = sum(is.na(pm25_hoy)))
 
 view(conteo_por_estacion)
 
-##ejemplo en de una estación en específico##############3
+## ejemplo en de una estación en específico##############
+
 pm25_diario %>%
   filter(Station == "1-9") %>% # Cambia esto por un ID de tu base
   select(Date.Local, pm25_hoy, pm25_lag1, pm25_lag7, pm25_futuro) %>%
