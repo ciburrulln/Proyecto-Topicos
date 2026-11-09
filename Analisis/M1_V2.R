@@ -1,7 +1,7 @@
 library(glmnet)
 
 formula_m1 <- pm25_futuro ~ pm25_hoy +
-  pm25_lag1 + pm25_lag7 + Event.Type.All
+  pm25_lag1 + pm25_lag7 + Event.Type.All + ultima_conc + antiguedad_dias
 
 variables_m1 <- all.vars(formula_m1)
 
@@ -156,3 +156,4 @@ resultados <- data.frame(
   )
 
 print(resultados)
+

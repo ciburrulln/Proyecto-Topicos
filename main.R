@@ -12,7 +12,7 @@ diccionario <- read.csv(here::here("datos", "diccionario.csv"))
 sitios <- read.csv(here::here("datos", "sitios.csv"))
 
 source(here::here("limpieza.R"))
-source(here::here("modelos.R"))
+source(here::here("referencia.R"))
 source(here::here("Analisis", "M1_V2.R"))
 source(here::here("Analisis", "M2.R"))
 # source(here::here("Analisis", "M3.R"))

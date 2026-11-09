@@ -5,8 +5,11 @@ variables_m3 <- c(
   "pm25_hoy",
   "pm25_lag1",
   "pm25_lag7",
-  "Event.Type.All"
+  "Event.Type.All",
+  "ultima_conc",
+  "antiguedad_dias"
 )
+
 
 entrenamiento_m3 <- entrenamiento[, variables_m3, drop = FALSE]
 reserva_m3 <- reserva[, variables_m3, drop = FALSE]
