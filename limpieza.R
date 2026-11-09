@@ -15,13 +15,9 @@ pm25_diario <- read.csv(here("datos", "pm25_diario.csv"))
 pm25_diario <- pm25_diario %>%
   select(-State.Code, -State.Name, 
          -Parameter.Code, -Parameter.Name, -Units.of.Measure,
-         -Date.of.Last.Change, -Method.Name, -Pollutant.Standard)
-
-pm25_diario <- pm25_diario %>%
-  select(-X1st.Max.Value, -X1st.Max.Hour, -AQI)
-
-pm25_diario <- pm25_diario %>%
-  select(-Latitude, -Longitude, -Datum, -Local.Site.Name, -Address, 
+         -Date.of.Last.Change, -Method.Name, -Pollutant.Standard,
+         -X1st.Max.Value, -X1st.Max.Hour, -AQI,
+         -Latitude, -Longitude, -Datum, -Local.Site.Name, -Address, 
          -County.Name, -City.Name, -CBSA.Name)
 
 pm25_diario <- pm25_diario %>%
@@ -46,11 +42,6 @@ info_estacion <- pm25_diario %>%
             total_dias = n_distinct(Date.Local),
             total_observaciones = n(),
             dias_sin_medicion = dias_totales - total_dias)
-
-
-#pm25_diario <- pm25_diario %>%
- # dplyr::filter(Station != "47-3")
-
 
 #### IDENTIFICAR LAS COMBINACIONES ####
 
@@ -249,6 +240,31 @@ pm25_diario <- pm25_diario %>%
       TRUE ~ Event.Type
     )
   )
+
+# Crear una referencia utilizando solo mediciones pasadas
+# También crea la antiguedad en días de esa ultima concentración
+pm25_diario <- pm25_diario %>%
+  mutate(
+    Date.Local = as.Date(Date.Local),
+    ultima_conc = pm25_hoy,
+    fecha_ultima = if_else(
+      !is.na(pm25_hoy),
+      Date.Local,
+      as.Date(NA)
+    )
+  ) %>%
+  group_by(Station) %>%
+  arrange(Date.Local, .by_group = TRUE) %>%
+  fill(ultima_conc, fecha_ultima, .direction = "down") %>%
+  mutate(
+    antiguedad_dias =
+      as.integer(Date.Local - fecha_ultima)
+  ) %>%
+  ungroup()
+
+# No se modifican los NA originales
+# ultima_conc solo se utiliza como predicción de referencia
+
 
 
 

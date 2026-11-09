@@ -360,8 +360,8 @@ info_estacion_final <- pm25_diario %>%
 # días faltantes totales
 sum(info_estacion_final$dias_sin_medicion)
 # proporción días faltantes
-sum(info_estacion_final$dias_sin_medicion) / (2192*29)
-# Menos del 3%
+sum(info_estacion_final$dias_sin_medicion) / (2192*30)
+# Aprox el 3%
 
 
 #Los días sin datos ahora quedan como NA
@@ -386,14 +386,6 @@ conteo_por_estacion <- pm25_diario %>%
   summarise(dias_faltantes = sum(is.na(pm25_hoy)))
 
 
-## ejemplo en de una estación en específico##############
-
-pm25_diario %>%
-  filter(Station == "1-9") %>% # Cambia esto por un ID de tu base
-  select(Date.Local, pm25_hoy, pm25_lag1, pm25_lag7, pm25_futuro) %>%
-  head(15)
-
-
 ##fechas NA
 pm25_diario_NA <- pm25_diario %>% filter(is.na(pm25_hoy))
 pm25_diario_NA
@@ -414,3 +406,26 @@ pm25_diario <- pm25_diario %>%
 table(pm25_diario$Event.Type.All)
 # Veamos si los modelos funcionan mejor con esta variable o con la otra con NA
 
+# Crear una referencia utilizando solo mediciones pasadas
+# También crea la antiguedad en días de esa ultima concentración
+pm25_diario <- pm25_diario %>%
+  mutate(
+    Date.Local = as.Date(Date.Local),
+    ultima_conc = pm25_hoy,
+    fecha_ultima = if_else(
+      !is.na(pm25_hoy),
+      Date.Local,
+      as.Date(NA)
+    )
+  ) %>%
+  group_by(Station) %>%
+  arrange(Date.Local, .by_group = TRUE) %>%
+  fill(ultima_conc, fecha_ultima, .direction = "down") %>%
+  mutate(
+    antiguedad_dias =
+      as.integer(Date.Local - fecha_ultima)
+  ) %>%
+  ungroup()
+
+# No se modifican los NA originales
+# ultima_conc solo se utiliza como predicción de referencia
