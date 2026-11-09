@@ -1,0 +1,6 @@
+readme ppenca xd
+
+1. limpieza.R
+2. En revisión_estaciones.R explicamos la decisión de no usar la
+duración 1 HR para todas las estaciones
+3. Modelos.R
