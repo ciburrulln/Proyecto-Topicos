@@ -84,7 +84,7 @@ info_estacion <- pm25_diario %>%
             max = max(Date.Local),
             total_dias = n_distinct(Date.Local),
             total_observaciones = n(),
-            NAS = dias_totales - total_dias)
+            dias_sin_medicion = dias_totales - total_dias)
 
 estacion473 <- pm25_diario %>%
   dplyr::filter(Station == "47-3")
@@ -187,7 +187,9 @@ mejor_combinacion <- pm25_diario %>%
 
 #### ELIMINAR OBSERVACIONES DUPLICADAS USANDO LA MEJOR COMBINACIÓN ####
 
-pm25_final <- pm25_diario %>%
+pm25_diario_original <- pm25_diario
+
+pm25_diario <- pm25_diario %>%
   semi_join(
     mejor_combinacion,
     by = c("Station", "POC", "Sample.Duration", "Method.Code")
@@ -199,12 +201,12 @@ pm25_final <- pm25_diario %>%
   )
 
 # Verificar que no existan duplicados
-pm25_final %>%
+pm25_diario %>%
   count(Station, Date.Local) %>%
   filter(n > 1)
 
 # Analizamos nuevamente la info de cada estacion 
-info_estacion_final <- pm25_final %>%
+info_estacion_final <- pm25_diario %>%
   group_by(Station) %>%
   summarise(min = min(Date.Local),
             max = max(Date.Local),
@@ -214,7 +216,7 @@ info_estacion_final <- pm25_final %>%
 
 #### Revisar estación 31-1004 ####
 
-pm25_diario %>%
+pm25_diario_original %>%
   filter(Station == "31-1004") %>%
   group_by(POC, Sample.Duration, Method.Code) %>%
   summarise(
@@ -226,7 +228,7 @@ pm25_diario %>%
 # Hubo cambio de Método el 2020!
 
 # Recuperar las observaciones del método anterior
-observaciones_recuperadas <- pm25_diario %>%
+observaciones_recuperadas <- pm25_diario_original %>%
   filter(
     Station == "31-1004",
     POC == 3,
@@ -234,14 +236,14 @@ observaciones_recuperadas <- pm25_diario %>%
     Method.Code == 204
   ) %>%
   anti_join(
-    pm25_final %>%
+    pm25_diario %>%
       distinct(Station, Date.Local),
     by = c("Station", "Date.Local")
   )
 
 # Incorporarlas a la base final
-pm25_final <- bind_rows(
-  pm25_final,
+pm25_diario <- bind_rows(
+  pm25_diario,
   observaciones_recuperadas
 ) %>%
   arrange(
@@ -251,79 +253,19 @@ pm25_final <- bind_rows(
   )
 
 # Verificar que no existan duplicados
-pm25_final %>%
+pm25_diario %>%
   count(Station, Date.Local) %>%
   filter(n > 1)
 
 
 # Analizamos nuevamente la info de cada estacion 
-info_estacion_final <- pm25_final %>%
+info_estacion_final <- pm25_diario %>%
   group_by(Station) %>%
   summarise(min = min(Date.Local),
             max = max(Date.Local),
             total_dias = n_distinct(Date.Local),
             total_observaciones = n(),
-            NAS = dias_totales - total_dias)
-
-
-#### Revisar estación 65-8001 ####
-
-pm25_diario %>%
-  filter(Station == "65-8001") %>%
-  group_by(POC, Sample.Duration, Method.Code) %>%
-  summarise(
-    inicio = min(Date.Local),
-    fin = max(Date.Local),
-    dias = n_distinct(Date.Local),
-    .groups = "drop"
-  )
-# Hubo cambio de POC el 2022 para el método 1 HR (yo lo cambiaría)
-
-#### Revisar estación 71-27 ####
-
-pm25_diario %>%
-  filter(Station == "71-27") %>%
-  group_by(POC, Sample.Duration, Method.Code) %>%
-  summarise(
-    inicio = min(Date.Local),
-    fin = max(Date.Local),
-    dias = n_distinct(Date.Local),
-    .groups = "drop"
-  )
-# Hubo cambio de método el 2022 para la duración 1 HR 
-# PERO tiene más observaciones la duración 24 HRS
-# 2120 > 1909 (CASI 200 OBSERVACIONES MÁS)
-
-
-#### Revisar estación 37-4008 ####
-
-pm25_diario %>%
-  filter(Station == "37-4008") %>%
-  group_by(POC, Sample.Duration, Method.Code) %>%
-  summarise(
-    inicio = min(Date.Local),
-    fin = max(Date.Local),
-    dias = n_distinct(Date.Local),
-    .groups = "drop"
-  )
-# La duración 1 hr llega hasta el 2021, así que nos mantenemos
-
-#### Revisar estación 37-1103 ####
-
-pm25_diario %>%
-  filter(Station == "37-1103") %>%
-  group_by(POC, Sample.Duration, Method.Code) %>%
-  summarise(
-    inicio = min(Date.Local),
-    fin = max(Date.Local),
-    dias = n_distinct(Date.Local),
-    .groups = "drop"
-  )
-# La duración 24 hrs tiene más de 1000 observaciones más que 
-# la duración 1 hr
-
-pm25_diario <- pm25_final
-
+            dias_sin_medicion = dias_totales - total_dias)
 
 #### IMPUTAR ####
 
@@ -348,9 +290,11 @@ conteo_faltantes <- pm25_diario %>%
   ) %>%
   arrange(desc(dias_sin_medicion)) # Ordena de la estación con más baches a la que menos tiene
 
-# Ver la tabla resumen
-print(conteo_faltantes)
-##son maximo 100 dias sin medición 101/2091 = 0.04607664 -> 4% máximo
+# días faltantes totales
+sum(conteo_faltantes$dias_sin_medicion)
+# proporción días faltantes
+sum(conteo_faltantes$dias_sin_medicion) / (2192*29)
+# Menos del 3%
 
 
 #Los días sin datos ahora quedan como NA
