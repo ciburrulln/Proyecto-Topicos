@@ -1,4 +1,4 @@
-source("limpieza.R")
+
 
 #PARTICIONES-----------------------------------------------------------------
 
@@ -33,9 +33,6 @@ mae(real, pred)
 
 #rmse
 rmse(real, pred) #no cambia tanto -> no hay errores tan grandes 
-
-##boxcox no se puede pq hay NAs
-boxcox(modelo_lm)
 
 
 
