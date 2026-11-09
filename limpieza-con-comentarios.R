@@ -405,5 +405,17 @@ pm25_diario_NA
 
 names(pm25_diario)
 
+# Creación de variable sin NA
+pm25_diario <- pm25_diario %>%
+  mutate(
+    Event.Type.All = case_when(
+      is.na(Event.Type) ~ "Sin medicion",
+      trimws(Event.Type) == "" ~ "Sin evento informado",
+      Event.Type == "Included" ~ "Evento incluido",
+      TRUE ~ Event.Type
+    )
+  )
 
+table(pm25_diario$Event.Type.All)
+# Veamos si los modelos funcionan mejor con esta variable o con la otra con NA
 

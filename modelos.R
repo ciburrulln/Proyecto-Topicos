@@ -1,4 +1,8 @@
+source("limpieza.R")
+
 #PARTICIONES-----------------------------------------------------------------
+
+names(pm25_diario)
 
 entrenamiento <- pm25_diario %>% filter(Date.Local >= "2019-01-01" & Date.Local <= "2021-12-31")
 validacion   <- pm25_diario %>% filter(Date.Local >= "2022-01-01" & Date.Local <= "2022-12-31")
@@ -7,11 +11,15 @@ reserva    <- pm25_diario %>% filter(Date.Local >= "2023-01-01" & Date.Local <= 
 pm25_diario
 modelo_lm <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7, data = entrenamiento)
 summary(modelo_lm)
-names(pm25_diario)
 
 #lm con tipo de evento -> es significativo pero no aporta??
 modelo_lm1 <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7 + Event.Type , data = entrenamiento)
 summary(modelo_lm1)
+
+#lm con tipo de evento sin NA 
+modelo_lm2 <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7 + Event.Type.All , data = entrenamiento)
+summary(modelo_lm2)
+
 
 #PARA EL PRIMER MODELO
 real <- pm25_diario$pm25_futuro
