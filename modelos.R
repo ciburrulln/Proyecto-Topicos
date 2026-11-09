@@ -8,7 +8,6 @@ entrenamiento <- pm25_diario %>% filter(Date.Local >= "2019-01-01" & Date.Local 
 validacion   <- pm25_diario %>% filter(Date.Local >= "2022-01-01" & Date.Local <= "2022-12-31")
 reserva    <- pm25_diario %>% filter(Date.Local >= "2023-01-01" & Date.Local <= "2024-12-31")
 
-pm25_diario
 modelo_lm <- lm(pm25_futuro ~ pm25_hoy + pm25_lag1 + pm25_lag7, data = entrenamiento)
 summary(modelo_lm)
 

@@ -71,7 +71,7 @@ pm25_diario <- pm25_diario %>%
 names(pm25_diario)
 
 # Casi todas las estaciones cuentan con la misma ventana de tiempo
-# La estación 47-3 no tiene días en el 2024, por lo que la borramos por simplicidad
+# La estación 47-3 no tiene días en el 2024, no la eliminamos pero lo auditamos
 # Mientras a la estación 37-4008 le faltan solo 8 días para completar el año
 
 dias_totales <- as.numeric(max(pm25_diario$Date.Local) - 
@@ -85,9 +85,8 @@ info_estacion <- pm25_diario %>%
             dias_sin_medicion = dias_totales - total_dias)
 
 
-pm25_diario <- pm25_diario %>%
-  dplyr::filter(Station != "47-3")
-
+#pm25_diario <- pm25_diario %>%
+ # dplyr::filter(Station != "47-3")
 
 # Todas las estaciones tienen más de una máquina 
 # o más de una forma de tomar las muestras, por lo que es importante

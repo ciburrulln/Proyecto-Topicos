@@ -48,8 +48,8 @@ info_estacion <- pm25_diario %>%
             dias_sin_medicion = dias_totales - total_dias)
 
 
-pm25_diario <- pm25_diario %>%
-  dplyr::filter(Station != "47-3")
+#pm25_diario <- pm25_diario %>%
+ # dplyr::filter(Station != "47-3")
 
 
 #### IDENTIFICAR LAS COMBINACIONES ####
