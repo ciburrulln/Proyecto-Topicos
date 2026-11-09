@@ -267,6 +267,13 @@ info_estacion_final <- pm25_diario %>%
             total_observaciones = n(),
             dias_sin_medicion = dias_totales - total_dias)
 
+# Borramos información que no es necesaria 
+# (¿SERÁ NECESARIO SAMPLE.DURATION DADO QUE HAY 4 ESTACIONES CON UNO DIFERENTE?)
+pm25_diario <- pm25_diario %>%
+  select(-Method.Code, -POC, -Sample.Duration,
+         -Observation.Count, -Observation.Percent )
+
+
 #### IMPUTAR ####
 
 # Días sin medición -------------------------------------------------------
@@ -280,10 +287,13 @@ pm25_diario <- pm25_diario %>%
 apply(is.na(pm25_diario), 2, sum)
 
 # 2. Contar los días sin medición (NA) por estación
-conteo_faltantes <- pm25_diario %>%
+info_estacion_final <- pm25_diario %>%
   group_by(Station) %>%
   summarise(
-    dias_totales       = n(),
+    min = min(Date.Local),
+    max = max(Date.Local),
+    total_dias = n_distinct(Date.Local),
+    total_observaciones = n(),
     dias_con_medicion  = sum(!is.na(Arithmetic.Mean)),
     dias_sin_medicion  = sum(is.na(Arithmetic.Mean)),
     porcentaje_faltante = round((dias_sin_medicion / dias_totales) * 100, 2)
@@ -291,9 +301,9 @@ conteo_faltantes <- pm25_diario %>%
   arrange(desc(dias_sin_medicion)) # Ordena de la estación con más baches a la que menos tiene
 
 # días faltantes totales
-sum(conteo_faltantes$dias_sin_medicion)
+sum(info_estacion_final$dias_sin_medicion)
 # proporción días faltantes
-sum(conteo_faltantes$dias_sin_medicion) / (2192*29)
+sum(info_estacion_final$dias_sin_medicion) / (2192*29)
 # Menos del 3%
 
 
@@ -333,4 +343,6 @@ pm25_diario_NA <- pm25_diario %>% filter(is.na(pm25_hoy))
 pm25_diario_NA
 
 names(pm25_diario)
+
+
 
