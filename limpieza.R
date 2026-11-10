@@ -191,7 +191,6 @@ pm25_diario <- pm25_diario %>%
   mutate(
     pm25_hoy    = Arithmetic.Mean,
     pm25_lag1   = lag(pm25_hoy, 1),   # Estrictamente el día calendario anterior (o NA si faltaba)
-    pm25_lag7   = lag(pm25_hoy, 7),   # Estrictamente 7 días calendario atrás
     pm25_futuro = lead(pm25_hoy, 1)   # Estrictamente el día calendario siguiente
   ) %>%
   dplyr::select(- Arithmetic.Mean) %>%
@@ -257,5 +256,9 @@ pm25_diario <- pm25_diario %>%
 
 pm25_diario <- pm25_diario %>%
   relocate(pm25_futuro)
+
+
+sum(complete.cases(pm25_diario))
+
 
 

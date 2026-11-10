@@ -1,37 +1,20 @@
-# ================================================================
-# CASO 02 - PM2.5: validacion temporal SIN IMPUTACION
-# Se ejecuta DESPUES de crear pm25_diario, particiones y
-# predicciones_estacionales con el codigo del equipo.
-# Entrena con 2019-2021 segun bloque; valida 2020, 2021, 2022.
-# NO consulta las respuestas de la reserva (2023-2024).
-# Mantiene intactos todos los NA de pm25_diario.
-# ================================================================
 
-paquetes <- c("dplyr", "lubridate", "glmnet", "rpart", "ranger")
-for (paq in paquetes) {
-  if (!requireNamespace(paq, quietly = TRUE)) install.packages(paq)
-}
 library(dplyr)
 library(lubridate)
 library(glmnet)
 library(rpart)
 library(ranger)
 
-stopifnot(exists("pm25_diario"),
-          exists("particiones"),
-          exists("predicciones_estacionales"))
 
-set.seed(3407)
 
-# NUNCA cambiar pm25_hoy, pm25_lag1, pm25_lag7 ni pm25_futuro.
-# ultima_conc sigue siendo la referencia historica que ya calcularon;
-# no se usa para rellenar ninguna de esas cuatro columnas.
+set.seed(22)
 
-# Niveles de estaciones conocidos en DESARROLLO (sin mirar prueba).
+
 niveles_estacion <- pm25_diario %>%
-  filter(as.Date(Date.Local) >= as.Date("2019-01-01"),
-         as.Date(Date.Local) < as.Date("2023-01-01")) %>%
   pull(Station) %>% as.character() %>% unique() %>% sort()
+
+niveles_estacion_ano <- pm25_diario %>%
+  pull(estacion_ano) %>% as.character() %>% unique() %>% sort()
 
 # Predictores elegidos previamente; el objeto original no se altera.
 # Nota: en casos completos pm25_hoy == ultima_conc y antiguedad_dias == 0;
@@ -41,8 +24,7 @@ base_modelo <- function(datos) {
     transmute(
       pm25_futuro = as.numeric(pm25_futuro),
       Station = factor(as.character(Station), levels = niveles_estacion),
-      mes_futuro = factor(as.character(mes_futuro),
-                          levels = as.character(1:12)),
+      mes_futuro = factor(mes_futuro, levels = as.character(1:12)),
       pm25_hoy = as.numeric(pm25_hoy),
       pm25_lag1 = as.numeric(pm25_lag1),
       pm25_lag7 = as.numeric(pm25_lag7),
