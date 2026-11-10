@@ -1,11 +1,6 @@
 
 # No se consulta la reserva 2023-2024 en este script.
 
-
-if (!requireNamespace("glmnet", quietly = TRUE)) install.packages("glmnet")
-if (!requireNamespace("rpart", quietly = TRUE)) install.packages("rpart")
-if (!requireNamespace("ranger", quietly = TRUE)) install.packages("ranger")
-
 library(dplyr)
 library(lubridate)
 library(glmnet)
@@ -16,14 +11,11 @@ stopifnot(exists("pm25_diario"),
           exists("particiones"),
           exists("predicciones_estacionales"))
 
-set.seed(3407)
+set.seed(2221268)
 pm25_diario <- pm25_diario %>%
   mutate(Date.Local = as.Date(Date.Local))
 
-# Estos niveles definen las estaciones conocidas, sin mirar la respuesta de prueba.
 niveles_estacion <- pm25_diario %>%
-  filter(Date.Local >= as.Date("2019-01-01"),
-         Date.Local < as.Date("2023-01-01")) %>%
   pull(Station) %>% as.character() %>% unique() %>% sort()
 
 variables_numericas <- c("pm25_hoy", "pm25_lag1", "pm25_lag7",
@@ -68,7 +60,7 @@ preparar_bloque <- function(entrenamiento, validacion) {
   list(ent = ent, val = val)
 }
 
-# Hiperparametros: 7 ridge, 6 arbol, 6 bosque (menos de 20 por familia).
+# Hiperparametros: 7 ridge, 6 arbol, 6 bosque.
 lambdas <- c(0.05, 0.2, 1, 3, 10, 30, 100)
 cps <- c(0.0001, 0.0005, 0.001, 0.003, 0.01, 0.03)
 grid_bosque <- expand.grid(mtry = c(3, 6, 10), hoja = c(10, 30))
@@ -83,7 +75,7 @@ predicciones_cv <- bind_rows(lapply(names(particiones), function(nombre) {
   # Las mismas filas que usan para comparar ambas referencias.
   estacional_bloque <- predicciones_estacionales %>%
     filter(Bloque == nombre) %>%
-    select(Station, Date.Local, pred_estacional)
+    dplyr::select(Station, Date.Local, pred_estacional)
 
   val_raw <- particiones[[nombre]]$validacion %>%
     left_join(estacional_bloque, by = c("Station", "Date.Local")) %>%
@@ -215,20 +207,20 @@ mejores <- resumen_cv %>%
   ungroup() %>%
   arrange(MAE)
 
-print(mejores %>% select(Modelo, Configuracion, n_total, MAE, RMSE))
+print(mejores %>% dplyr::select(Modelo, Configuracion, n_total, MAE, RMSE))
 
 # 8. Tabla para comprobar estabilidad entre bloques.
 detalle_mejores <- resultados_cv %>%
-  inner_join(mejores %>% select(Modelo, Configuracion),
+  inner_join(mejores %>% dplyr::select(Modelo, Configuracion),
              by = c("Modelo", "Configuracion")) %>%
   arrange(Modelo, Bloque)
 
 print(detalle_mejores %>%
-        select(Bloque, Modelo, Configuracion, n, MAE, RMSE), n = Inf)
+        dplyr::select(Bloque, Modelo, Configuracion, n, MAE, RMSE), n = Inf)
 
 # 9. Predicciones de las configuraciones elegidas: estacion y estacion del ano.
 predicciones_mejores <- predicciones_cv %>%
-  inner_join(mejores %>% select(Modelo, Configuracion),
+  inner_join(mejores %>% dplyr::select(Modelo, Configuracion),
              by = c("Modelo", "Configuracion")) %>%
   mutate(
     temporada = case_when(

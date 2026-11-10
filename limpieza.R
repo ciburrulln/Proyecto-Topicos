@@ -241,3 +241,6 @@ pm25_diario <- pm25_diario %>%
 
 pm25_diario <- pm25_diario %>%
   relocate(pm25_futuro)
+
+pm25_diario <- pm25_diario %>%
+  select(- fecha_ultima)

@@ -425,4 +425,6 @@ pm25_diario <- pm25_diario %>%
 pm25_diario <- pm25_diario %>%
   relocate(pm25_futuro)
 
+pm25_diario <- pm25_diario %>%
+  dplyr::select(- fecha_ultima)
 names(pm25_diario)
