@@ -194,6 +194,7 @@ pm25_diario <- pm25_diario %>%
     pm25_lag7   = lag(pm25_hoy, 7),   # Estrictamente 7 días calendario atrás
     pm25_futuro = lead(pm25_hoy, 1)   # Estrictamente el día calendario siguiente
   ) %>%
+  dplyr::select(- Arithmetic.Mean) %>%
   ungroup()
 
 sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia

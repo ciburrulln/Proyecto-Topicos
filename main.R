@@ -23,7 +23,20 @@ rm(
 
 
 source(here::here("referencia_bloques.R"))
+
+rm(
+  comprobacion,
+  resultados_antiguedad,
+  resultados_globales
+)
+
 source(here::here("referencia_patron.R"))
+
+rm(
+  resultados_estacional, 
+  comparacion_referencias
+)
+
 source(here::here("Analisis", "M1_V2.R"))
 source(here::here("Analisis", "M2.R"))
 # source(here::here("Analisis", "M3.R"))

@@ -423,7 +423,6 @@ pm25_diario <- pm25_diario %>%
 # ultima_conc solo se utiliza como predicción de referencia
 
 pm25_diario <- pm25_diario %>%
-  relocate(pm25_futuro)%>%
-  select(- fecha_ultima)
+  relocate(pm25_futuro)
 
 names(pm25_diario)
