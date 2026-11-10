@@ -31,31 +31,6 @@ pm25_diario <- pm25_diario %>%
 
 
 #### LIMPIEZA DE OBSERVACIONES ####
-
-
-dias_totales <- as.numeric(max(pm25_diario$Date.Local) - 
-                             min(pm25_diario$Date.Local)) + 1
-info_estacion <- pm25_diario %>%
-  group_by(Station) %>%
-  summarise(min = min(Date.Local),
-            max = max(Date.Local),
-            total_dias = n_distinct(Date.Local),
-            total_observaciones = n(),
-            dias_sin_medicion = dias_totales - total_dias)
-
-#### IDENTIFICAR LAS COMBINACIONES ####
-
-combinaciones <- pm25_diario %>%
-  group_by(Station, POC, Sample.Duration, Method.Code) %>%
-  summarise(
-    n_registros = n(),
-    n_fechas = n_distinct(Date.Local),
-    media_porcentaje_obs = mean(Observation.Percent),
-    .groups = "drop"
-  ) %>%
-  arrange(Station, desc(n_fechas))
-
-
 #### ELEGIR MEJOR COMBINACIÓN ####
 
 pm25_diario <- pm25_diario %>%
@@ -167,8 +142,7 @@ info_estacion_final <- pm25_diario %>%
             total_observaciones = n(),
             dias_sin_medicion = dias_totales - total_dias)
 
-# Borramos información que no es necesaria 
-# (¿SERÁ NECESARIO SAMPLE.DURATION DADO QUE HAY 4 ESTACIONES CON UNO DIFERENTE?)
+# Borramos información que no es necesaria para la predicción
 pm25_diario <- pm25_diario %>%
   dplyr::select(-Method.Code, -POC, -Sample.Duration,
          -Observation.Count, -Observation.Percent )
@@ -176,7 +150,7 @@ pm25_diario <- pm25_diario %>%
 
 #### Agregar días ####
 
-# Días sin medición -------------------------------------------------------
+# Días sin medición 
 
 pm25_diario <- pm25_diario %>%
   group_by(Station) %>%
@@ -185,7 +159,7 @@ pm25_diario <- pm25_diario %>%
   ungroup()
 
 
-# 2. Contar los días sin medición (NA) por estación
+# Contar los días sin medición (NA) por estación
 info_estacion_final <- pm25_diario %>%
   group_by(Station) %>%
   summarise(
@@ -203,7 +177,7 @@ info_estacion_final <- pm25_diario %>%
 sum(info_estacion_final$dias_sin_medicion)
 # proporción días faltantes
 sum(info_estacion_final$dias_sin_medicion) / (2192*29)
-# Menos del 3%
+# Aproximadamente el 3%
 
 
 #Los días sin datos ahora quedan como NA
@@ -224,13 +198,7 @@ sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia
 
 
 
-##fechas NA
-pm25_diario_NA <- pm25_diario %>% filter(is.na(pm25_hoy))
-pm25_diario_NA
-
-
-
-# Creación de variable sin NA y eliminarla
+# Creación de variable Event.Type sin NA 
 pm25_diario <- pm25_diario %>%
   mutate(
     Event.Type = case_when(
@@ -241,13 +209,13 @@ pm25_diario <- pm25_diario %>%
     )
   )
 
-# Crear una referencia utilizando solo mediciones pasadas
-# También crea la antiguedad en días de esa ultima concentración
+# Crear una referencia utilizando solo mediciones pasadas ultima_conc
+# También crea la antiguedad en días de esa ultima concentración antiguedad_dias
 # El mes y el mes futuro podrían llegar a ser un buen predictor 
 pm25_diario <- pm25_diario %>%
   mutate(
     Date.Local = as.Date(Date.Local),
-    mes = month(Date.Local),
+    mes = factor(month(Date.Local)),
     mes_futuro = factor(month(Date.Local + days(1))),
     ultima_conc = pm25_hoy,
     fecha_ultima = if_else(
@@ -266,6 +234,6 @@ pm25_diario <- pm25_diario %>%
   ungroup()
 
 # No se modifican los NA originales
-# ultima_conc solo se utiliza como predicción de referencia
+
 
 

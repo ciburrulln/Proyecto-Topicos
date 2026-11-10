@@ -88,8 +88,8 @@ particiones <- lapply(bloques, function(b) {
   
   validacion <- pm25_diario %>%
     filter(
-      Date.Local >= b$inicio_val,
-      Date.Local <= b$fin_val
+      Date.Local + 1 >= b$inicio_val,
+      Date.Local + 1 <= b$fin_val
     )
   
   list(

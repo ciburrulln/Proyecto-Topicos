@@ -22,11 +22,14 @@ apply(is.na(pm25_diario), 2, sum)
 # Variables constantes
 sapply(pm25_diario, function(x) length(unique(x)) == 1)
 
+
 # Eliminar las variables redundantes pues todas las mediciones son en California
 # y solo estamos calculando pm25. 
 # Date of Last Change no entrega información relevante. 
 # Method.Name da la misma información que Method.Code.
 # Pollutant Standard da la misma información que Sample.Duration 
+table(pm25_diario$Pollutant.Standard, pm25_diario$Sample.Duration)
+
 pm25_diario <- pm25_diario %>%
   select(-State.Code, -State.Name, 
          -Parameter.Code, -Parameter.Name, -Units.of.Measure,
@@ -265,7 +268,6 @@ info_estacion_final <- pm25_diario %>%
             dias_sin_medicion = dias_totales - total_dias)
 
 # Borramos información que no es necesaria 
-# (¿SERÁ NECESARIO SAMPLE.DURATION DADO QUE HAY 4 ESTACIONES CON UNO DIFERENTE?)
 pm25_diario <- pm25_diario %>%
   select(-Method.Code, -POC, -Sample.Duration,
          -Observation.Count, -Observation.Percent )
@@ -343,7 +345,7 @@ pm25_diario <- pm25_diario %>%
 
 apply(is.na(pm25_diario), 2, sum)
 
-# 2. Contar los días sin medición (NA) por estación
+# Contar los días sin medición (NA) por estación
 info_estacion_final <- pm25_diario %>%
   group_by(Station) %>%
   summarise(
@@ -381,7 +383,7 @@ pm25_diario <- pm25_diario %>%
 sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia
 
 
-# Creación de variable Event.Type sin NA y eliminarla
+# Creación de variable Event.Type sin NA 
 pm25_diario <- pm25_diario %>%
   mutate(
     Event.Type = case_when(
@@ -392,8 +394,6 @@ pm25_diario <- pm25_diario %>%
     )
   )
 
-table(pm25_diario$Event.Type.All)
-# Veamos si los modelos funcionan mejor con esta variable o con la otra con NA
 
 # Crear una referencia utilizando solo mediciones pasadas
 # También crea la antiguedad en días de esa ultima concentración
@@ -401,7 +401,7 @@ table(pm25_diario$Event.Type.All)
 pm25_diario <- pm25_diario %>%
   mutate(
     Date.Local = as.Date(Date.Local),
-    mes = month(Date.Local),
+    mes = factor(month(Date.Local)),
     mes_futuro = factor(month(Date.Local + days(1))),
     ultima_conc = pm25_hoy,
     fecha_ultima = if_else(
