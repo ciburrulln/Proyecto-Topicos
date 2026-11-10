@@ -234,6 +234,7 @@ pm25_diario <- pm25_diario %>%
     antiguedad_dias =
       as.integer(Date.Local - fecha_ultima)
   ) %>%
+  dplyr::select(- fecha_ultima)%>%
   ungroup()
 
 # No se modifican los NA originales
@@ -242,5 +243,4 @@ pm25_diario <- pm25_diario %>%
 pm25_diario <- pm25_diario %>%
   relocate(pm25_futuro)
 
-pm25_diario <- pm25_diario %>%
-  select(- fecha_ultima)
+
