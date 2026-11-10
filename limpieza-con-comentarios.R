@@ -1,6 +1,5 @@
 if(!require("pacman")){install.packages("pacman")}; library(pacman)
-pacman::p_load(here, tidyverse, lubridate)
-library(dplyr)
+pacman::p_load(here, tidyverse, lubridate, dplyr)
 
 #### CARGAR BASES DE DATOS ####
 
@@ -31,7 +30,7 @@ sapply(pm25_diario, function(x) length(unique(x)) == 1)
 table(pm25_diario$Pollutant.Standard, pm25_diario$Sample.Duration)
 
 pm25_diario <- pm25_diario %>%
-  select(-State.Code, -State.Name, 
+  dplyr::select(-State.Code, -State.Name, 
          -Parameter.Code, -Parameter.Name, -Units.of.Measure,
          -Date.of.Last.Change, -Method.Name, -Pollutant.Standard)
 
@@ -39,11 +38,11 @@ pm25_diario <- pm25_diario %>%
 # las variables que registran el valor máximo durante ese día,
 # la hora local a la que ocurrió y el índice de calidad de aire
 pm25_diario <- pm25_diario %>%
-  select(-X1st.Max.Value, -X1st.Max.Hour, -AQI)
+  dplyr::select(-X1st.Max.Value, -X1st.Max.Hour, -AQI)
 
 # Información que ya existe en sitios.cvs y la cruzaremos posteriormente
 pm25_diario <- pm25_diario %>%
-  select(-Latitude, -Longitude, -Datum, -Local.Site.Name, -Address, 
+  dplyr::select(-Latitude, -Longitude, -Datum, -Local.Site.Name, -Address, 
          -County.Name, -City.Name, -CBSA.Name)
 
 
@@ -61,7 +60,7 @@ pm25_diario <- pm25_diario %>%
     Station = paste(County.Code, Site.Num, sep = "-")
   ) %>%
   relocate(Station, Method.Code) %>%
-  select(-County.Code, -Site.Num) %>%
+  dplyr::select(-County.Code, -Site.Num) %>%
   mutate(Arithmetic.Mean = as.numeric(Arithmetic.Mean))
 
 
@@ -121,7 +120,7 @@ combinaciones <- pm25_diario %>%
 # Solo entre los años 2019-2022
 
 # las mediciones de menos de 18 horas no son significativas
-# según la información disponible en el leeme
+# según la información disponible en el leeme norma epa
 pm25_filtrado <- pm25_diario %>%
   filter(
     (Sample.Duration == "1 HOUR" & Observation.Count >= 18) |
@@ -269,7 +268,7 @@ info_estacion_final <- pm25_diario %>%
 
 # Borramos información que no es necesaria 
 pm25_diario <- pm25_diario %>%
-  select(-Method.Code, -POC, -Sample.Duration,
+  dplyr::select(-Method.Code, -POC, -Sample.Duration,
          -Observation.Count, -Observation.Percent )
 
 #### ¿Por qué no usamos la duración 1 HR en estas 4 estaciones? ####
@@ -378,6 +377,7 @@ pm25_diario <- pm25_diario %>%
     pm25_lag7   = lag(pm25_hoy, 7),   # Estrictamente 7 días calendario atrás
     pm25_futuro = lead(pm25_hoy, 1)   # Estrictamente el día calendario siguiente
   ) %>%
+  dplyr::select(- Arithmetic.Mean) %>%
   ungroup()
 
 sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia
@@ -422,4 +422,8 @@ pm25_diario <- pm25_diario %>%
 # No se modifican los NA originales
 # ultima_conc solo se utiliza como predicción de referencia
 
+pm25_diario <- pm25_diario %>%
+  relocate(pm25_futuro)%>%
+  select(- fecha_ultima)
 
+names(pm25_diario)

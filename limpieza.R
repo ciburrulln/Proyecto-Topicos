@@ -238,4 +238,5 @@ pm25_diario <- pm25_diario %>%
 # No se modifican los NA originales
 
 
-
+pm25_diario <- pm25_diario %>%
+  relocate(pm25_futuro)
