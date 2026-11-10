@@ -23,9 +23,10 @@ apply(is.na(pm25_diario), 2, sum)
 sapply(pm25_diario, function(x) length(unique(x)) == 1)
 
 # Eliminar las variables redundantes pues todas las mediciones son en California
-# y solo estamos calculando pm25. Además Date of Last Change no entrega
-# información relevante. Method.Name da la misma información que Method.Code, 
-# mientras Pollutant Standard da menos información que Sample.Duration 
+# y solo estamos calculando pm25. 
+# Date of Last Change no entrega información relevante. 
+# Method.Name da la misma información que Method.Code.
+# Pollutant Standard da la misma información que Sample.Duration 
 pm25_diario <- pm25_diario %>%
   select(-State.Code, -State.Name, 
          -Parameter.Code, -Parameter.Name, -Units.of.Measure,
@@ -43,8 +44,6 @@ pm25_diario <- pm25_diario %>%
          -County.Name, -City.Name, -CBSA.Name)
 
 
-# POC, Sample Duration y Method.Code se eliminarán posteriormente
-
 # County.Code y Site.Num son las variables que identifican la estación,
 # el date local da justo la observación de
 # una fecha específica en una estación
@@ -52,7 +51,7 @@ pm25_diario <- pm25_diario %>%
 
 # Darle a la fecha formato de fecha
 # Crear variable para identificar las estaciones
-# Eliminar las variables que identificaban
+# Eliminar las variables County.Code y Site.Num
 pm25_diario <- pm25_diario %>%
   mutate(
     across(Date.Local, as.Date),
@@ -65,13 +64,14 @@ pm25_diario <- pm25_diario %>%
 
 #### LIMPIEZA DE OBSERVACIONES ####
 
-# Ver las combinaciones más comunes de instrumento, duración y estándar
+# Ver las combinaciones más comunes de instrumento, duración y método
 # Preocuparse de no promediar indiscriminadamente resúmenes incompatibles
 
 names(pm25_diario)
 
 # Casi todas las estaciones cuentan con la misma ventana de tiempo
 # La estación 47-3 no tiene días en el 2024, no la eliminamos pero lo auditamos
+# Tendremos que tener cuidado en la validación
 # Mientras a la estación 37-4008 le faltan solo 8 días para completar el año
 
 dias_totales <- as.numeric(max(pm25_diario$Date.Local) - 
@@ -85,8 +85,6 @@ info_estacion <- pm25_diario %>%
             dias_sin_medicion = dias_totales - total_dias)
 
 
-#pm25_diario <- pm25_diario %>%
- # dplyr::filter(Station != "47-3")
 
 # Todas las estaciones tienen más de una máquina 
 # o más de una forma de tomar las muestras, por lo que es importante
@@ -120,6 +118,7 @@ combinaciones <- pm25_diario %>%
 # Solo entre los años 2019-2022
 
 # las mediciones de menos de 18 horas no son significativas
+# según la información disponible en el leeme
 pm25_filtrado <- pm25_diario %>%
   filter(
     (Sample.Duration == "1 HOUR" & Observation.Count >= 18) |
@@ -144,9 +143,11 @@ mejores_combinaciones <- pm25_diario %>%
   # Ordenar para que la con más cobertura quede en primera fila
   arrange(Station, desc(dias_observados)) 
 
-# Se observa que los promedios de bloque de 24 horas (24 HRS BLK AVG) coinciden en cantidad
-# con los promedios horarios (1 HR), si eliminamos las muestras donde con la
-# duración 1HR se usan menos de 18 horas, solo se diferencian por el truncamiento 
+# Se observa en mejores_combinaciones_filtradas que los promedios 
+# de bloque de 24 horas (24 HRS BLK AVG) coinciden en cantidad
+# con los promedios horarios (1 HR) si eliminamos las muestras 
+# donde con la duración 1HR se usan menos de 18 horas. 
+# Notamos que solo se diferencian por el truncamiento 
 # a un decimal aplicado por la EPA.
 # Por lo que basta analizar la mejor combinación solo con uno de los dos.
 # Nos quedamos con 1HR con las observaciones con más de 18 horas para calcular el promedio
@@ -253,7 +254,6 @@ pm25_diario <- bind_rows(
 pm25_diario %>%
   count(Station, Date.Local) %>%
   filter(n > 1)
-
 
 # Analizamos nuevamente la info de cada estacion 
 info_estacion_final <- pm25_diario %>%
@@ -380,19 +380,8 @@ pm25_diario <- pm25_diario %>%
 
 sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia
 
-## NAs por estación (repartidos)
-conteo_por_estacion <- pm25_diario %>%
-  group_by(Station) %>%
-  summarise(dias_faltantes = sum(is.na(pm25_hoy)))
 
-
-##fechas NA
-pm25_diario_NA <- pm25_diario %>% filter(is.na(pm25_hoy))
-pm25_diario_NA
-
-names(pm25_diario)
-
-# Creación de variable sin NA
+# Creación de variable Event.Type sin NA
 pm25_diario <- pm25_diario %>%
   mutate(
     Event.Type.All = case_when(
