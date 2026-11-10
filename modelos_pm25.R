@@ -1,6 +1,4 @@
 
-# No se consulta la reserva 2023-2024 en este script.
-
 library(dplyr)
 library(lubridate)
 library(glmnet)
