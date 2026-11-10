@@ -1,9 +1,4 @@
-# ================================================================
-# EYP3407 - Caso 02: PM2.5 del dia siguiente
-# CONTINUACION: ejecutar despues de crear pm25_diario y bloques.
-# M1: Ridge/Lasso | M2: arbol podado | M3: bosque aleatorio
-# Sin imputacion; comparacion sobre las mismas filas completas.
-# ================================================================
+
 
 library(dplyr)
 library(tidyr)
@@ -12,62 +7,43 @@ library(glmnet)
 library(rpart)
 library(ranger)
 
-set.seed(3407)
+set.seed(2221268)
 
 # 1. BASE ANALITICA: SOLO OBSERVACIONES COMPLETAS
 # El conjunto de variables es el mismo para los tres modelos.
-# No se usan Event.Type, AQI ni informacion del dia objetivo.
+# No se usan Event.Type.
 pm25_diario <- pm25_diario %>%
   mutate(Date.Local = as.Date(Date.Local))
 
-estaciones_desarrollo <- sort(unique(as.character(
-  pm25_diario$Station[!is.na(pm25_diario$Station) &
-                        pm25_diario$Date.Local <= as.Date("2022-12-31")]
-)))
+niveles_estacion <- pm25_diario %>%
+  pull(Station) %>% as.character() %>% unique() %>% sort()
 
-predictores <- c("Station", "mes_futuro", "dia_semana_futuro",
-                 "pm25_hoy", "pm25_lag1", "pm25_lag7")
+niveles_estacion_ano <- pm25_diario %>%
+  pull(estacion_ano) %>% as.character() %>% unique() %>% sort()
 
-variables_completas <- c("pm25_futuro", predictores, "ultima_conc")
+predictores <- c("Station", "Event.Type", 
+                 "pm25_hoy", "pm25_lag1",
+                 "mes_futuro", "mes",
+                 "estacion_ano", "ultima_conc", 
+                 "antiguedad_dias")
 
-datos_preparados <- pm25_diario %>%
-  mutate(
-    fecha_objetivo = Date.Local + days(1),
-    Station = factor(as.character(Station), levels = estaciones_desarrollo),
-    mes_futuro = factor(month(fecha_objetivo), levels = 1:12),
-    dia_semana_futuro = factor(wday(fecha_objetivo, week_start = 1), levels = 1:7),
-    estacion_objetivo = case_when(
-      month(fecha_objetivo) %in% 3:5 ~ "Primavera",
-      month(fecha_objetivo) %in% 6:8 ~ "Verano",
-      month(fecha_objetivo) %in% 9:11 ~ "Otoño",
-      TRUE ~ "Invierno"
-    ),
-    estacion_objetivo = factor(estacion_objetivo,
-      levels = c("Invierno", "Primavera", "Verano", "Otoño"))
-  ) %>%
-  filter(fecha_objetivo >= as.Date("2019-01-01"),
-         fecha_objetivo <= as.Date("2024-12-31"))
+variables_completas <- c("pm25_futuro", predictores)
 
-# Mostrar cuantas filas se pierden en desarrollo (sin mirar resultados de prueba).
-cobertura_desarrollo <- datos_preparados %>%
-  filter(fecha_objetivo <= as.Date("2022-12-31")) %>%
-  mutate(completa = if_all(all_of(variables_completas), ~ !is.na(.x))) %>%
-  group_by(anio = year(fecha_objetivo)) %>%
+
+# Mostrar cuantas filas se pierden en desarrollo (sin mirar resultados de prueba)
+cobertura_desarrollo <- pm25_diario %>%
+  filter(Date.Local + days(1) <= as.Date("2022-12-31")) %>%
+  mutate(completa = complete.cases(pick(all_of(variables_completas)))) %>%
+  group_by(anio = year(Date.Local + days(1))) %>%
   summarise(total_filas = n(), filas_completas = sum(completa),
             filas_excluidas = sum(!completa), .groups = "drop")
 print(cobertura_desarrollo)
 
-datos_modelo <- datos_preparados %>%
-  filter(if_all(all_of(variables_completas), ~ !is.na(.x)))
-
-# La unidad analitica debe ser unica: estacion y fecha de origen.
-if (any(duplicated(datos_modelo[c("Station", "Date.Local")]))) {
-  stop("Hay duplicados estacion-dia. Revisar la construccion de pm25_diario.")
-}
+datos_modelo <- pm25_diario %>%
+  filter(complete.cases(pick(all_of(variables_completas))))
 
 # Formula comun y matriz para la regresion penalizada.
-formula_modelo <- pm25_futuro ~ Station + mes_futuro + dia_semana_futuro +
-  pm25_hoy + pm25_lag1 + pm25_lag7
+formula_modelo <- pm25_futuro ~ Station + Event.Type + pm25_hoy + pm25_lag1 + mes_futuro + mes + estacion_ano + ultima_conc + antiguedad_dias
 
 matriz_x <- function(datos, formula = formula_modelo) {
   model.matrix(formula, data = datos)[, -1, drop = FALSE]

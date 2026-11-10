@@ -221,7 +221,6 @@ pm25_diario <- pm25_diario %>%
     Date.Local = as.Date(Date.Local),
     mes = factor(month(Date.Local)),
     mes_futuro = factor(month(Date.Local + days(1))),
-    
     # Estación del año (hemisferio norte)
     estacion_ano = case_when(
       month(Date.Local) %in% 3:5 ~ "Primavera",

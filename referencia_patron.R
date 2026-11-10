@@ -4,12 +4,10 @@ library(lubridate)
 
 # Uso de IA #
 # La IA apoyó la creación de funciones para calcular
-# el patrón estacional en los tres bloques temporales.
+# las métricas del patrón estacional en los tres
+# bloques temporales.
 
 #### REFERENCIA ESTACIONAL ####
-
-# Calcular los promedios históricos por estación y mes,
-# utilizando únicamente los datos de entrenamiento.
 
 predicciones_estacionales <- bind_rows(
   lapply(names(particiones), function(nombre) {
@@ -17,8 +15,8 @@ predicciones_estacionales <- bind_rows(
     entrenamiento <- particiones[[nombre]]$entrenamiento
     validacion <- particiones[[nombre]]$validacion
     
-    # Calcular el promedio histórico de PM2.5
-    # por estación y mes del día objetivo
+    # Calcular promedio histórico por estación y mes,
+    # utilizando únicamente entrenamiento
     
     patron_estacional <- entrenamiento %>%
       mutate(
@@ -32,30 +30,45 @@ predicciones_estacionales <- bind_rows(
         .groups = "drop"
       )
     
-    # Asignar a cada observación de validación
-    # el promedio histórico correspondiente
-    
-    validacion %>%
+    # Asignar las predicciones a entrenamiento
+    entrenamiento <- entrenamiento %>%
       mutate(
         mes_objetivo = month(Date.Local + 1)
       ) %>%
       left_join(
         patron_estacional,
         by = c("Station", "mes_objetivo")
+      )
+    
+    # Asignar las predicciones a validación
+    validacion <- validacion %>%
+      mutate(
+        mes_objetivo = month(Date.Local + 1)
       ) %>%
+      left_join(
+        patron_estacional,
+        by = c("Station", "mes_objetivo")
+      )
+    
+    # Juntar ambos conjuntos
+    bind_rows(
+      Entrenamiento = entrenamiento,
+      Validacion = validacion,
+      .id = "Conjunto"
+    ) %>%
       mutate(Bloque = nombre)
   })
 )
 
 
-#### EVALUACIÓN GLOBAL DEL PATRÓN ESTACIONAL ####
+#### MÉTRICAS DE ENTRENAMIENTO Y VALIDACIÓN ####
 
 resultados_estacional <- predicciones_estacionales %>%
   filter(
     !is.na(pm25_futuro),
     !is.na(pred_estacional)
   ) %>%
-  group_by(Bloque) %>%
+  group_by(Bloque, Conjunto) %>%
   summarise(
     n = n(),
     MAE = mean(abs(pm25_futuro - pred_estacional)),
@@ -69,11 +82,12 @@ print(resultados_estacional)
 
 #### COMPARACIÓN DE LAS DOS REFERENCIAS ####
 
-# Evaluar ambas referencias sobre exactamente
-# las mismas observaciones de validación.
+# Comparamos solamente validación y utilizamos
+# exactamente las mismas observaciones
 
 comparacion_referencias <- predicciones_estacionales %>%
   filter(
+    Conjunto == "Validacion",
     !is.na(pm25_futuro),
     !is.na(ultima_conc),
     !is.na(pred_estacional)
@@ -82,13 +96,20 @@ comparacion_referencias <- predicciones_estacionales %>%
   summarise(
     n = n(),
     
-    MAE_ultima_conc = mean(abs(pm25_futuro - ultima_conc)),
-    MAE_estacional = mean(abs(pm25_futuro - pred_estacional)),
+    MAE_ultima_conc =
+      mean(abs(pm25_futuro - ultima_conc)),
     
-    RMSE_ultima_conc = sqrt(mean((pm25_futuro - ultima_conc)^2)),
-    RMSE_estacional = sqrt(mean((pm25_futuro - pred_estacional)^2)),
+    MAE_estacional =
+      mean(abs(pm25_futuro - pred_estacional)),
+    
+    RMSE_ultima_conc =
+      sqrt(mean((pm25_futuro - ultima_conc)^2)),
+    
+    RMSE_estacional =
+      sqrt(mean((pm25_futuro - pred_estacional)^2)),
     
     .groups = "drop"
   )
 
 print(comparacion_referencias)
+
