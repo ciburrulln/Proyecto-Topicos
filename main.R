@@ -12,6 +12,16 @@ diccionario <- read.csv(here::here("datos", "diccionario.csv"))
 sitios <- read.csv(here::here("datos", "sitios.csv"))
 
 source(here::here("limpieza.R"))
+
+rm(
+  observaciones_recuperadas,
+  mejor_combinacion,
+  info_estacion_final,
+  pm25_diario_original,
+  dias_totales
+)
+
+
 source(here::here("referencia_bloques.R"))
 source(here::here("referencia_patron.R"))
 source(here::here("Analisis", "M1_V2.R"))
