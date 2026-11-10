@@ -243,9 +243,12 @@ pm25_diario <- pm25_diario %>%
 
 # Crear una referencia utilizando solo mediciones pasadas
 # También crea la antiguedad en días de esa ultima concentración
+# El mes y el mes futuro podrían llegar a ser un buen predictor 
 pm25_diario <- pm25_diario %>%
   mutate(
     Date.Local = as.Date(Date.Local),
+    mes = month(Date.Local),
+    mes_futuro = factor(month(Date.Local + days(1))),
     ultima_conc = pm25_hoy,
     fecha_ultima = if_else(
       !is.na(pm25_hoy),
@@ -264,7 +267,5 @@ pm25_diario <- pm25_diario %>%
 
 # No se modifican los NA originales
 # ultima_conc solo se utiliza como predicción de referencia
-
-
 
 
