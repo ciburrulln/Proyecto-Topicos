@@ -32,6 +32,8 @@ pm25_diario <- pm25_diario %>%
 
 #### LIMPIEZA DE OBSERVACIONES ####
 #### ELEGIR MEJOR COMBINACIÓN ####
+dias_totales <- as.numeric(max(pm25_diario$Date.Local) - 
+                             min(pm25_diario$Date.Local)) + 1
 
 pm25_diario <- pm25_diario %>%
   filter(
