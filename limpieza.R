@@ -13,7 +13,7 @@ pm25_diario <- read.csv(here("datos", "pm25_diario.csv"))
 #### LIMPIEZA DE VARIABLES ####
 
 pm25_diario <- pm25_diario %>%
-  select(-State.Code, -State.Name, 
+  dplyr::select(-State.Code, -State.Name, 
          -Parameter.Code, -Parameter.Name, -Units.of.Measure,
          -Date.of.Last.Change, -Method.Name, -Pollutant.Standard,
          -X1st.Max.Value, -X1st.Max.Hour, -AQI,
@@ -26,7 +26,7 @@ pm25_diario <- pm25_diario %>%
     Station = paste(County.Code, Site.Num, sep = "-")
   ) %>%
   relocate(Station, Method.Code) %>%
-  select(-County.Code, -Site.Num) %>%
+  dplyr::select(-County.Code, -Site.Num) %>%
   mutate(Arithmetic.Mean = as.numeric(Arithmetic.Mean))
 
 
@@ -170,7 +170,7 @@ info_estacion_final <- pm25_diario %>%
 # Borramos información que no es necesaria 
 # (¿SERÁ NECESARIO SAMPLE.DURATION DADO QUE HAY 4 ESTACIONES CON UNO DIFERENTE?)
 pm25_diario <- pm25_diario %>%
-  select(-Method.Code, -POC, -Sample.Duration,
+  dplyr::select(-Method.Code, -POC, -Sample.Duration,
          -Observation.Count, -Observation.Percent )
 
 
