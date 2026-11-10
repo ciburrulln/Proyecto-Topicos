@@ -258,7 +258,7 @@ pm25_diario <- pm25_diario %>%
   relocate(pm25_futuro)
 
 
-sum(complete.cases(pm25_diario))
-
+(65760 - sum(complete.cases(pm25_diario)) ) / 65760
+# Observaciones incompletas
 
 

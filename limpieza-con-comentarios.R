@@ -374,7 +374,6 @@ pm25_diario <- pm25_diario %>%
   mutate(
     pm25_hoy    = Arithmetic.Mean,
     pm25_lag1   = lag(pm25_hoy, 1),   # Estrictamente el día calendario anterior (o NA si faltaba)
-    pm25_lag7   = lag(pm25_hoy, 7),   # Estrictamente 7 días calendario atrás
     pm25_futuro = lead(pm25_hoy, 1)   # Estrictamente el día calendario siguiente
   ) %>%
   dplyr::select(- Arithmetic.Mean) %>%
@@ -434,13 +433,65 @@ pm25_diario <- pm25_diario %>%
   ) %>%
   dplyr::select(-fecha_ultima) %>%
   ungroup()
-
-
 # No se modifican los NA originales
-# ultima_conc solo se utiliza como predicción de referencia
 
 pm25_diario <- pm25_diario %>%
   relocate(pm25_futuro)
 
 
-names(pm25_diario)
+(65760 - sum(complete.cases(pm25_diario)) ) / 65760
+# Observaciones incompletas
+
+#### AHORA EL ANÁLISIS ####
+
+
+# 1. Frecuencia de categorías de eventos
+pm25_diario %>%
+  count(Event.Type) %>%
+  mutate(porcentaje = round(100 * n / sum(n), 2))
+
+# 2. Revisar concentraciones sospechosas
+pm25_diario %>%
+  summarise(
+    negativas = sum(pm25_hoy < 0, na.rm = TRUE),
+    iguales_a_cero = sum(pm25_hoy == 0, na.rm = TRUE),
+    minimo = min(pm25_hoy, na.rm = TRUE),
+    maximo = max(pm25_hoy, na.rm = TRUE)
+  )
+
+# 3. Resumen de concentraciones en desarrollo
+pm25_diario %>%
+  filter(year(Date.Local) <= 2022) %>%
+  summarise(
+    p01 = quantile(pm25_hoy, 0.01, na.rm = TRUE),
+    mediana = median(pm25_hoy, na.rm = TRUE),
+    p99 = quantile(pm25_hoy, 0.99, na.rm = TRUE),
+    p995 = quantile(pm25_hoy, 0.995, na.rm = TRUE)
+  )
+
+# 4. Diez concentraciones más elevadas de desarrollo
+pm25_diario %>%
+  filter(year(Date.Local) <= 2022) %>%
+  arrange(desc(pm25_hoy)) %>%
+  select(Station, Date.Local, pm25_hoy) %>%
+  head(10)
+
+# 5. Revisar porcentajes y conteos originales
+original <- read.csv(here("datos", "pm25_diario.csv"))
+
+original %>%
+  summarise(
+    porcentaje_fuera_de_rango =
+      sum(Observation.Percent < 0 |
+            Observation.Percent > 100, na.rm = TRUE),
+    conteos_negativos =
+      sum(Observation.Count < 0, na.rm = TRUE),
+    horarios_mayores_a_24 =
+      sum(Sample.Duration == "1 HOUR" &
+            Observation.Count > 24, na.rm = TRUE)
+  )
+
+# 6. Frecuencia de modalidades instrumentales
+original %>%
+  count(Sample.Duration, Method.Code, sort = TRUE) %>%
+  mutate(porcentaje = round(100 * n / nrow(original), 2))
