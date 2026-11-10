@@ -2,3 +2,4 @@ ignorar.csv
 /datos
 .DS_Store
 .Rhistory
+referencia.R
