@@ -99,6 +99,26 @@ particiones <- lapply(bloques, function(b) {
 })
 
 
+#### VERIFICAR PARTICIONES ####
+
+comprobacion <- bind_rows(
+  lapply(names(particiones), function(nombre) {
+    
+    datos <- particiones[[nombre]]$validacion
+    
+    tibble(
+      Bloque = nombre,
+      primera_fecha_predicha = min(datos$Date.Local + 1),
+      ultima_fecha_predicha = max(datos$Date.Local + 1),
+      n = nrow(datos)
+    )
+  })
+)
+
+print(comprobacion)
+
+
+
 #### EVALUACIÓN GLOBAL DE LA REFERENCIA ####
 
 resultados_globales <- bind_rows(
