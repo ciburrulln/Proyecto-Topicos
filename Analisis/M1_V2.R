@@ -1,28 +1,28 @@
 library(glmnet)
 
 formula_m1 <- pm25_futuro ~ pm25_hoy +
-  pm25_lag1 + pm25_lag7 + Event.Type.All + ultima_conc + antiguedad_dias
+  pm25_lag1 + pm25_lag7 + Event.Type + ultima_conc + antiguedad_dias
 
 variables_m1 <- all.vars(formula_m1)
 
 entrenamiento_m1 <- entrenamiento[, variables_m1, drop = FALSE]
 reserva_m1 <- reserva[, variables_m1, drop = FALSE]
 
-niveles_evento <- unique(as.character(entrenamiento_m1$Event.Type.All))
+niveles_evento <- unique(as.character(entrenamiento_m1$Event.Type))
 niveles_evento <- niveles_evento[!is.na(niveles_evento)]
 
-entrenamiento_m1$Event.Type.All <- factor(
-  entrenamiento_m1$Event.Type.All,
+entrenamiento_m1$Event.Type <- factor(
+  entrenamiento_m1$Event.Type,
   levels = niveles_evento
 )
 
-reserva_m1$Event.Type.All <- factor(
-  reserva_m1$Event.Type.All,
+reserva_m1$Event.Type <- factor(
+  reserva_m1$Event.Type,
   levels = niveles_evento
 )
 
 reserva_m1 <- reserva_m1[
-  !is.na(reserva_m1$Event.Type.All),
+  !is.na(reserva_m1$Event.Type),
   ,
   drop = FALSE
 ]

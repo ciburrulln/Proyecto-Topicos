@@ -1,7 +1,4 @@
-source("limpieza.R")
 
-
-source("limpieza.R")
 library(dplyr)
 
 # Uso de IA #
@@ -141,4 +138,3 @@ resultados_antiguedad <- bind_rows(
   })
 )
 
-print(resultados_antiguedad)

@@ -230,10 +230,10 @@ pm25_diario_NA
 
 
 
-# Creación de variable sin NA
+# Creación de variable sin NA y eliminarla
 pm25_diario <- pm25_diario %>%
   mutate(
-    Event.Type.All = case_when(
+    Event.Type = case_when(
       is.na(Event.Type) ~ "Sin medicion",
       trimws(Event.Type) == "" ~ "Sin evento informado",
       Event.Type == "Included" ~ "Evento incluido",

@@ -1,6 +1,7 @@
-source("limpieza.R")
 
 
+# No borrar este R aunque no se envíe, es para 
+# entender mejor lo que ocurre en referecia_bloques
 # Función para calcular métricas de referencia
 calcular_metricas_referencia <- function(datos) {
   

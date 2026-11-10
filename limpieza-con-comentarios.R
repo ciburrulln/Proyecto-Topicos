@@ -381,10 +381,10 @@ pm25_diario <- pm25_diario %>%
 sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia
 
 
-# Creación de variable Event.Type sin NA
+# Creación de variable Event.Type sin NA y eliminarla
 pm25_diario <- pm25_diario %>%
   mutate(
-    Event.Type.All = case_when(
+    Event.Type = case_when(
       is.na(Event.Type) ~ "Sin medicion",
       trimws(Event.Type) == "" ~ "Sin evento informado",
       Event.Type == "Included" ~ "Evento incluido",
