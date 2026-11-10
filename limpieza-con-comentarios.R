@@ -413,8 +413,8 @@ pm25_diario <- pm25_diario %>%
       month(Date.Local) %in% 9:11 ~ "Otoño",
       month(Date.Local) %in% c(12, 1, 2) ~ "Invierno"
     ),
-    estacion = factor(
-      estacion,
+    estacion_ano = factor(
+      estacion_ano,
       levels = c("Invierno", "Primavera", "Verano", "Otoño")
     ),
     

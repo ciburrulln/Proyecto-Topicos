@@ -5,16 +5,15 @@ library(glmnet)
 library(rpart)
 library(ranger)
 
-stopifnot(exists("pm25_diario"),
-          exists("particiones"),
-          exists("predicciones_estacionales"))
-
 set.seed(2221268)
 pm25_diario <- pm25_diario %>%
   mutate(Date.Local = as.Date(Date.Local))
 
 niveles_estacion <- pm25_diario %>%
   pull(Station) %>% as.character() %>% unique() %>% sort()
+
+niveles_estacion_ano <- pm25_diario %>%
+  pull(estacion_ano) %>% as.character() %>% unique() %>% sort()
 
 variables_numericas <- c("pm25_hoy", "pm25_lag1", "pm25_lag7",
                          "ultima_conc", "antiguedad_dias")
@@ -25,8 +24,8 @@ base_modelo <- function(datos) {
     transmute(
       pm25_futuro = as.numeric(pm25_futuro),
       Station = factor(as.character(Station), levels = niveles_estacion),
-      mes_futuro = factor(as.character(month(as.Date(Date.Local) + 1)),
-                          levels = as.character(1:12)),
+      estacion_ano = factor(as.character(estacion_ano), levels = niveles_estacion_ano),
+      mes_futuro = factor(mes_futuro, levels = as.character(1:12)),
       pm25_hoy = as.numeric(pm25_hoy),
       pm25_lag1 = as.numeric(pm25_lag1),
       pm25_lag7 = as.numeric(pm25_lag7),
@@ -248,3 +247,29 @@ print(errores_por_temporada, n = Inf)
 
 # Proxima etapa: reajuste con todas las respuestas disponibles en 2019-2022,
 # y evaluacion UNA SOLA VEZ en prueba 2023-2024. NO se hace en este script.
+
+#### REVISAR DATOS FALTANTES ####
+
+variables_predictoras <- c(
+  "Station",
+  "mes_futuro",
+  "pm25_hoy",
+  "pm25_lag1",
+  "pm25_lag7",
+  "ultima_conc",
+  "antiguedad_dias"
+)
+
+# NA por variable
+colSums(is.na(pm25_diario[
+  c("pm25_futuro", variables_predictoras)
+]))
+
+# Filas con respuesta observada
+sum(!is.na(pm25_diario$pm25_futuro))
+
+# Filas completas para modelamiento
+sum(
+  !is.na(pm25_diario$pm25_futuro) &
+    complete.cases(pm25_diario[, variables_predictoras])
+)
