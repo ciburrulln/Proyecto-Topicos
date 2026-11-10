@@ -215,11 +215,26 @@ pm25_diario <- pm25_diario %>%
 # Crear una referencia utilizando solo mediciones pasadas ultima_conc
 # También crea la antiguedad en días de esa ultima concentración antiguedad_dias
 # El mes y el mes futuro podrían llegar a ser un buen predictor 
+# Se agrega estacioon del año 
+
 pm25_diario <- pm25_diario %>%
   mutate(
     Date.Local = as.Date(Date.Local),
     mes = factor(month(Date.Local)),
     mes_futuro = factor(month(Date.Local + days(1))),
+    
+    # Estación del año (hemisferio norte)
+    estacion_ano = case_when(
+      month(Date.Local) %in% 3:5 ~ "Primavera",
+      month(Date.Local) %in% 6:8 ~ "Verano",
+      month(Date.Local) %in% 9:11 ~ "Otoño",
+      month(Date.Local) %in% c(12, 1, 2) ~ "Invierno"
+    ),
+    estacion = factor(
+      estacion,
+      levels = c("Invierno", "Primavera", "Verano", "Otoño")
+    ),
+    
     ultima_conc = pm25_hoy,
     fecha_ultima = if_else(
       !is.na(pm25_hoy),
@@ -234,7 +249,7 @@ pm25_diario <- pm25_diario %>%
     antiguedad_dias =
       as.integer(Date.Local - fecha_ultima)
   ) %>%
-  dplyr::select(- fecha_ultima)%>%
+  dplyr::select(-fecha_ultima) %>%
   ungroup()
 
 # No se modifican los NA originales
