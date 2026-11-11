@@ -200,27 +200,27 @@ sum(is.na(pm25_diario$pm25_hoy)) #NAs totales por dia
 
 
 
-# Creación de variable Event.Type sin NA 
-pm25_diario <- pm25_diario %>%
-  mutate(
-    Event.Type = case_when(
-      is.na(Event.Type) ~ "Sin medicion",
-      trimws(Event.Type) == "" ~ "Sin evento informado",
-      Event.Type == "Included" ~ "Evento incluido",
-      TRUE ~ Event.Type
-    )
-  )
 
 # Crear una referencia utilizando solo mediciones pasadas ultima_conc
 # También crea la antiguedad en días de esa ultima concentración antiguedad_dias
 # El mes y el mes futuro podrían llegar a ser un buen predictor 
-# Se agrega estacioon del año 
+# Se agrega estacion del año, dia de la semana y año
 
 pm25_diario <- pm25_diario %>%
   mutate(
     Date.Local = as.Date(Date.Local),
     mes = factor(month(Date.Local)),
-    mes_futuro = factor(month(Date.Local + days(1))),
+    ano = year(Date.Local),
+    
+    # Día de la semana
+    dia_semana = wday(
+      Date.Local,
+      label = TRUE,
+      abbr = FALSE,
+      week_start = 1,
+      locale = "es_ES"
+    ),
+    
     # Estación del año (hemisferio norte)
     estacion_ano = case_when(
       month(Date.Local) %in% 3:5 ~ "Primavera",
@@ -247,7 +247,7 @@ pm25_diario <- pm25_diario %>%
     antiguedad_dias =
       as.integer(Date.Local - fecha_ultima)
   ) %>%
-  dplyr::select(-fecha_ultima) %>%
+  dplyr::select(-fecha_ultima, -Event.Type) %>%
   ungroup()
 
 # No se modifican los NA originales

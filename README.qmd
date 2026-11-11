@@ -1,1 +1,2 @@
+Llamar datos a la carpeta 
 Ejecutar main.R
