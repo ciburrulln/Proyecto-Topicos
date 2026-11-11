@@ -309,9 +309,9 @@ stopifnot(all(vapply(particiones_modelo, function(p) {
     all(p$entrenamiento$fecha_objetivo < as.Date("2023-01-01")) &&
       all(p$validacion$fecha_objetivo < as.Date("2023-01-01"))}, logical(1))))
 
-# A. REPRESENTACIÓN: M1 CON AÑO VS SIN AÑO
+# A. REPRESENTACIÓN: M1 CON pm25_lag1 VS SIN pm25_lag1
 # Mismas observaciones, bloques y predictores restantes.
-formula_sin_ano <- update(formula_modelo, . ~ . - ano)
+formula_sin_ano <- update(formula_modelo, . ~ . - pm25_lag1)
 # Evaluar las mismas 20 configuraciones de M1, ahora sin año.
 cv_m1_sin_ano <- bind_rows(
   lapply(names(particiones_modelo), function(nombre) {
