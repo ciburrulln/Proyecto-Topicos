@@ -240,6 +240,25 @@ procedimiento_elegido <- slice_head(criterio_seleccion, n = 1)
 print(criterio_seleccion)
 print(procedimiento_elegido)
 
+#### TABLA FINAL DE COMPARACION ####
+
+# MAE promedio de la referencia
+mae_ref <- criterio_seleccion %>%
+  filter(Modelo == "Referencia: persistencia") %>%
+  pull(MAE_medio_bloques)
+
+# Comparar todos los procedimientos
+tabla_comparativa <- criterio_seleccion %>%
+  mutate(
+    diferencia_MAE = MAE_medio_bloques - mae_ref,
+    
+    mejora_porcentual = 100 *
+      (mae_ref - MAE_medio_bloques) / mae_ref
+  ) %>%
+  arrange(MAE_medio_bloques)
+
+print(tabla_comparativa)
+
 # 8. DIAGNOSTICO POR ESTACION, ESTACION DEL ANO Y EPISODIOS ALTOS
 # Umbral obtenido UNICAMENTE con respuestas de desarrollo (2019-2022).
 umbral_alto <- datos_modelo %>%
