@@ -470,48 +470,191 @@ sensibilidad_poblacion <- sensibilidad_poblacion_bloques %>%
 print(sensibilidad_poblacion)
 
 # 10. PRUEBA FINAL SELLADA (2023-2024)
-# Dejar FALSE mientras comparan modelos y cierran las decisiones.
-# Cambiar a TRUE UNA SOLA VEZ cuando hayan congelado el procedimiento.
-EVALUAR_PRUEBA_FINAL <- FALSE
+
+# Cambiar a TRUE solo cuando todas las decisiones
+# de modelamiento esten cerradas.
+EVALUAR_PRUEBA_FINAL <- TRUE
 
 if (EVALUAR_PRUEBA_FINAL) {
-  entrenamiento_final <- datos_modelo %>%
-    filter(fecha_objetivo >= as.Date("2019-01-01"),
-           fecha_objetivo <= as.Date("2022-12-31"))
-  prueba_final <- datos_modelo %>%
-    filter(fecha_objetivo >= as.Date("2023-01-01"),
-           fecha_objetivo <= as.Date("2024-12-31"))
-  if (nrow(prueba_final) == 0) {
-    stop("No hay casos completos en prueba final.")}
-  pred_prueba <- predecir_todos(entrenamiento_final, prueba_final, semilla = SEMILLA)
   
-  comparacion_prueba <- comparar_modelos(pred_prueba) %>% arrange(MAE)
+  #### ENTRENAMIENTO Y PRUEBA FINAL ####
+  
+  entrenamiento_final <- datos_modelo %>%
+    filter(
+      fecha_objetivo >= as.Date("2019-01-01"),
+      fecha_objetivo <= as.Date("2022-12-31")
+    )
+  
+  prueba_final <- datos_modelo %>%
+    filter(
+      fecha_objetivo >= as.Date("2023-01-01"),
+      fecha_objetivo <= as.Date("2024-12-31")
+    )
+  
+  if (nrow(prueba_final) == 0) {
+    stop("No hay casos completos en prueba final.")
+  }
+  
+  # Reajustar los modelos con sus hiperparametros
+  # previamente seleccionados en desarrollo.
+  
+  pred_prueba <- predecir_todos(
+    entrenamiento_final,
+    prueba_final,
+    semilla = SEMILLA
+  )
+  
+  # Verificar predicciones completas.
+  stopifnot(all(complete.cases(
+    pred_prueba[, c("pm25_futuro", unname(nombres_pred))]
+  )))
+  
+  
+  #### COMPARACION GENERAL EN PRUEBA ####
+  
+  comparacion_prueba <- comparar_modelos(pred_prueba) %>%
+    arrange(MAE)
+  
   print(comparacion_prueba)
   
-  # Errores por estacion y temporada en prueba, sin cambiar parametros.
+  
+  #### DIAGNOSTICO DE ERRORES ####
+  
+  # Todas las predicciones corresponden a prueba.
+  # El umbral fue definido previamente en desarrollo.
+  
   diagnostico_prueba <- pred_prueba %>%
-    pivot_longer(cols = all_of(unname(nombres_pred)),
-                 names_to = "Modelo", values_to = "Prediccion") %>%
-    mutate(error_abs = abs(pm25_futuro - Prediccion))
+    mutate(
+      episodio = if_else(
+        pm25_futuro >= umbral_alto,
+        "Concentracion alta",
+        "Resto"
+      )
+    ) %>%
+    pivot_longer(
+      cols = all_of(unname(nombres_pred)),
+      names_to = "Modelo",
+      values_to = "Prediccion"
+    ) %>%
+    mutate(
+      error_abs = abs(pm25_futuro - Prediccion),
+      error_cuadrado = (pm25_futuro - Prediccion)^2
+    )
+  
+  
+  #### A. ERRORES POR ESTACION ####
   
   prueba_por_estacion <- diagnostico_prueba %>%
     group_by(Station, Modelo) %>%
-    summarise(n = n(), MAE = mean(error_abs), .groups = "drop")
+    summarise(
+      n = n(),
+      MAE = mean(error_abs),
+      RMSE = sqrt(mean(error_cuadrado)),
+      .groups = "drop"
+    )
+  
+  print(prueba_por_estacion)
+  
+  
+  #### B. ERRORES POR TEMPORADA ####
   
   prueba_por_temporada <- diagnostico_prueba %>%
     group_by(estacion_objetivo, Modelo) %>%
-    summarise(n = n(), MAE = mean(error_abs), .groups = "drop")
+    summarise(
+      n = n(),
+      MAE = mean(error_abs),
+      RMSE = sqrt(mean(error_cuadrado)),
+      .groups = "drop"
+    )
   
-  print(prueba_por_estacion)
   print(prueba_por_temporada)
   
+  
+  #### C. ERRORES EN EPISODIOS ALTOS ####
+  
   prueba_episodios <- diagnostico_prueba %>%
-    mutate(episodio = if_else(pm25_futuro >= umbral_alto,
-                              "Concentracion alta", "Resto")) %>%
     group_by(episodio, Modelo) %>%
-    summarise(n = n(), MAE = mean(error_abs), .groups = "drop")
+    summarise(
+      n = n(),
+      MAE = mean(error_abs),
+      RMSE = sqrt(mean(error_cuadrado)),
+      .groups = "drop"
+    )
+  
   print(prueba_episodios)
   
-  message("Prueba evaluada solo sobre casos completos: ", nrow(prueba_final))
+  
+  #### D. COMPARACION POR ESTACION ####
+  
+  # Comparar Lasso con persistencia en cada estacion.
+  
+  comparacion_estaciones_prueba <- prueba_por_estacion %>%
+    dplyr::select(Station, Modelo, MAE) %>%
+    pivot_wider(
+      names_from = Modelo,
+      values_from = MAE
+    ) %>%
+    mutate(
+      diferencia_MAE = pred_M1 - pred_persistencia
+    )
+  
+  print(comparacion_estaciones_prueba)
+  
+  # Contar estaciones donde cada procedimiento mejora.
+  
+  resumen_estaciones_prueba <- comparacion_estaciones_prueba %>%
+    summarise(
+      estaciones_total = n(),
+      mejora_lasso = sum(diferencia_MAE < 0),
+      mejora_persistencia = sum(diferencia_MAE > 0),
+      empates = sum(diferencia_MAE == 0)
+    )
+  
+  print(resumen_estaciones_prueba)
+  
+  
+  #### E. FIGURA DE ERRORES POR TEMPORADA ####
+  
+  figura_temporada_prueba <- prueba_por_temporada %>%
+    mutate(
+      Modelo = recode(
+        Modelo,
+        "pred_M1" = "Lasso",
+        "pred_arbol" = "Arbol podado",
+        "pred_bosque" = "Bosque aleatorio",
+        "pred_persistencia" = "Persistencia"
+      )
+    ) %>%
+    ggplot(aes(
+      x = estacion_objetivo,
+      y = MAE,
+      color = Modelo,
+      group = Modelo
+    )) +
+    geom_line(linewidth = 0.8) +
+    geom_point(size = 2.5) +
+    labs(
+      title = "Error de prediccion por temporada en prueba",
+      x = "Estacion del año",
+      y = "MAE (µg/m³)",
+      color = "Procedimiento"
+    ) +
+    theme_minimal()
+  
+  print(figura_temporada_prueba)
+  
+  # Guardar figura para el informe.
+  
+  ggsave(
+    "figura_temporada_prueba.pdf",
+    plot = figura_temporada_prueba,
+    width = 8,
+    height = 4.5
+  )
+  
+  message(
+    "Prueba evaluada sobre ",
+    nrow(prueba_final),
+    " observaciones completas."
+  )
 }
-
