@@ -37,6 +37,4 @@ rm(
   comparacion_referencias
 )
 
-source(here::here("Analisis", "M1_V2.R"))
-source(here::here("Analisis", "M2.R"))
-# source(here::here("Analisis", "M3.R"))
+source(here::here("modelos_pm25.R"))
