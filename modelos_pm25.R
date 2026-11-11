@@ -39,7 +39,7 @@ datos_preparados <- pm25_diario %>%
     Station = factor(as.character(Station), levels = niveles_estacion),
     mes = factor(as.character(mes), levels = as.character(1:12)),
     dia_semana = dia_semana,
-    ano = as.factor(ano), 
+    ano = year(ano), 
     estacion_ano = factor(as.character(estacion_ano),
                           levels = c("Invierno", "Primavera", "Verano", "Otoño")),
     estacion_objetivo = case_when(
