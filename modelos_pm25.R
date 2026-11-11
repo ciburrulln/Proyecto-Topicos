@@ -229,6 +229,30 @@ comparacion_bloques <- bind_rows(lapply(names(particiones_modelo), function(nomb
     mutate(Bloque = nombre)}))
 print(comparacion_bloques)
 
+tabla_bloques <- comparacion_bloques %>%
+  mutate(
+    Año = case_when(
+      Bloque == "bloque_1" ~ "Bloque 1",
+      Bloque == "bloque_2" ~ "Bloque 2",
+      Bloque == "bloque_3" ~ "Bloque 3"
+    ),
+    Modelo = recode(
+      Modelo,
+      "Referencia: persistencia" = "Persistencia",
+      "M1: regresion penalizada" = "M1 Lasso",
+      "M2: arbol podado" = "M2 Arbol",
+      "M3: bosque aleatorio" = "M3 Bosque"
+    )
+  ) %>%
+  dplyr::select(Año, Modelo, MAE) %>%
+  tidyr::pivot_wider(
+    names_from = Modelo,
+    values_from = MAE
+  ) %>%
+  mutate(across(where(is.numeric) & !matches("Año"), ~ round(.x, 2)))
+
+print(tabla_bloques)
+
 # Seleccion principal: promedio no ponderado del MAE de los tres bloques.
 # Coherente con la regla usada para escoger hiperparametros.
 criterio_seleccion <- comparacion_bloques %>%
@@ -302,6 +326,24 @@ figura_temporada <- ggplot(errores_temporada,
        y = "MAE (microgramos/m3)", color = "Modelo") +
   theme_minimal()
 print(figura_temporada)
+
+comparacion_estaciones <- errores_estacion %>%
+  select(Station, Modelo, MAE) %>%
+  pivot_wider(
+    names_from = Modelo,
+    values_from = MAE
+  ) %>%
+  mutate(
+    diferencia = pred_M1 - pred_persistencia
+  )
+
+comparacion_estaciones %>%
+  summarise(
+    estaciones_total = n(),
+    mejora_lasso = sum(diferencia < 0),
+    mejora_persistencia = sum(diferencia > 0),
+    empates = sum(diferencia == 0)
+  )
 
 # 9. DOS ANÁLISIS DE SENSIBILIDAD EN DESARROLLO
 # Comprobar que ninguna partición incluya la prueba final.

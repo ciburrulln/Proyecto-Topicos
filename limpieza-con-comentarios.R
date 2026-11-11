@@ -15,6 +15,7 @@ sitios <- read.csv(here("datos", "sitios.csv"))
 
 #### LIMPIEZA DE VARIABLES ####
 
+dim(pm25_diario)
 # No tiene NA solo en aqi
 apply(is.na(pm25_diario), 2, sum)
 
