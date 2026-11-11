@@ -285,6 +285,7 @@ print(tabla_comparativa)
 
 # 8. DIAGNOSTICO POR ESTACION, ESTACION DEL ANO Y EPISODIOS ALTOS
 # Umbral obtenido UNICAMENTE con respuestas de desarrollo (2019-2022).
+# No se usó esto en el informe!
 umbral_alto <- datos_modelo %>%
   filter(fecha_objetivo <= as.Date("2022-12-31")) %>%
   pull(pm25_futuro) %>%
