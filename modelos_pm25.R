@@ -11,8 +11,6 @@ set.seed(2221268)
 
 # 1. BASE ANALITICA: SOLO OBSERVACIONES COMPLETAS
 # Los tres modelos usan los mismos predictores y las mismas filas.
-# Se incluye Event.Type del dia de origen (t), no del dia futuro (t+1).
-# IMPORTANTE: justificar que Event.Type estaba disponible al predecir.
 pm25_diario <- pm25_diario %>%
   mutate(Date.Local = as.Date(Date.Local))
 
@@ -40,8 +38,7 @@ predictores <- c(
 )
 variables_completas <- c("pm25_futuro", predictores)
 
-# Se mantiene el diagnostico por ESTACION DEL ANO DEL DIA OBJETIVO.
-# Esto NO constituye un patron estacional de referencia.
+
 datos_preparados <- pm25_diario %>%
   mutate(
     fecha_objetivo = Date.Local + days(1),
