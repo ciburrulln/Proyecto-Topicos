@@ -1,13 +1,57 @@
-Llamar datos a la carpeta 
-Ejecutar main.R
+---
+title: "Proyecto de análisis de PM2.5"
+format:
+  html:
+    toc: true
+    toc-title: "Contenido"
+    number-sections: true
+---
+
+# Descripción del proyecto
+
+Este proyecto tiene como objetivo realizar el procesamiento y análisis de datos asociados a las concentraciones diarias de PM2.5 promedio. Para ello, se utilizan distintos scripts de R que ejecutan etapas de limpieza, construcción de referencias y aplicación de modelos.
+
+# Organización del proyecto
 
 
+```text
+proyecto/
+│
+├── main.R
+├── limpieza.R
+├── referencia_bloques.R
+├── referencia_patron.R
+├── modelos_pm25.R
+├── .here
+│
+└── datos/
+    ├── pm25_diario.csv
+    ├── diccionario.csv
+    └── sitios.csv
+```
+
+## Descripción de los archivos
+- **`.here`**: archivo esencial para el funcionamiento del proyecto, puesto que se usa para las rutas relativas necesarias para el main.
+- **`main.R`**: archivo principal del proyecto. Coordina y ejecuta todos los procedimientos mediante la llamada secuencial a los distintos scripts.
+- **`limpieza.R`**: este archivo elimina variables de la base original y se encarga de las observaciones duplicadas.
+- **`referencia_bloques.R`**: Genera los bloques temporales que serán utilizados en el entrenamiento de los modelos.
+- **`referencia_patron.R`**: define funciones para la construcción de referencias basadas en patrones.
+- **`modelos_pm25.R`**: Define, ejecuta y compara los modelos.
 
 
+## Carpeta `datos`
+
+La carpeta `datos/` contiene las bases de datos necesarias para ejecutar el proyecto:
+
+- **`pm25_diario.csv`**: contiene los registros diarios de PM2.5.
+- **`diccionario.csv`**: contiene el diccionario de variables de las bases de datos.
+- **`sitios.csv`**: contiene información de los sitios de monitoreo.
 
 
+# Instrucciones de ejecución
 
-
+Para ejecutar correctamente el proyecto, únicamente se debe ejecutar el archivo `main.R`.
+La carpeta datos es la misma carpeta del zip asignado al grupo 2 en Canvas. Para que funcione el proyecto necesariamente debe ser renombrada como datos.
 
 
 Referencias:
