@@ -371,37 +371,225 @@ figura_temporada <- ggplot(errores_temporada,
   theme_minimal()
 print(figura_temporada)
 
-# 9. DOS ANALISIS DE SENSIBILIDAD EN DESARROLLO
-# (A) Representacion: sin pm25_lag1 vs con pm25_lag1.
-formula_corta <- update(formula_modelo, . ~ . - pm25_lag1)
+# ============================================================
+# 9. ANÁLISIS DE SENSIBILIDAD EN DESARROLLO
+# ============================================================
 
-sensibilidad_historia <- bind_rows(lapply(names(particiones_modelo), function(nombre) {
-  ent <- particiones_modelo[[nombre]]$entrenamiento
-  val <- particiones_modelo[[nombre]]$validacion
-  ajuste <- glmnet(matriz_x(ent, formula_corta), ent$pm25_futuro,
-                   alpha = mejor_m1$alpha, lambda = lambdas,
-                   standardize = TRUE)
-  pred_corta <- as.numeric(predict(ajuste,
-                                   newx = matriz_x(val, formula_corta),
-                                   s = mejor_m1$lambda))
-  pred_larga <- filter(pred_validacion, Bloque == nombre)$pred_M1
-  tibble(Bloque = nombre, n = nrow(val),
-         MAE_historia_corta = mean(abs(val$pm25_futuro - pred_corta)),
-         MAE_historia_larga = mean(abs(val$pm25_futuro - pred_larga)))
-})) %>%
-  mutate(diferencia_corta_menos_larga =
-           MAE_historia_corta - MAE_historia_larga)
-print(sensibilidad_historia)
+library(dplyr)
+library(glmnet)
 
-# (B) Poblacion: cambia la comparacion si no contamos episodios altos.
-# Se diagnostica el efecto; NO se vuelve a seleccionar el modelo.
+# ------------------------------------------------------------
+# A. REPRESENTACIÓN: RESPUESTA ORIGINAL VS LOGARÍTMICA
+# ------------------------------------------------------------
+
+# Se mantienen:
+# - Los mismos predictores.
+# - Los mismos bloques temporales.
+# - El tipo de penalización seleccionado para M1 (alpha).
+#
+# Se vuelve a seleccionar lambda para la respuesta logarítmica.
+# La selección y comparación se realizan mediante MAE en la
+# escala original de PM2.5.
+
+# 1. Revisar la respuesta antes de transformar.
+# Este código exige valores no negativos.
+# Si falla, revisar esos registros antes de continuar.
+
+respuesta_desarrollo <- unlist(
+  lapply(particiones_modelo, function(bloque) {
+    c(
+      bloque$entrenamiento$pm25_futuro,
+      bloque$validacion$pm25_futuro
+    )
+  }),
+  use.names = FALSE
+)
+
+if (any(!is.finite(respuesta_desarrollo))) {
+  stop("Hay respuestas faltantes o no finitas. Revisar antes de ajustar.")
+}
+
+if (any(respuesta_desarrollo < 0)) {
+  stop("Hay concentraciones negativas. Revisar antes de aplicar log1p.")
+}
+
+# Grilla amplia para la nueva escala de respuesta.
+lambdas_log <- 10^seq(2, -5, length.out = 100)
+
+# 2. Ajustar y evaluar cada lambda en los bloques de desarrollo.
+
+resultados_log <- bind_rows(
+  lapply(names(particiones_modelo), function(nombre) {
+    
+    ent <- particiones_modelo[[nombre]]$entrenamiento
+    val <- particiones_modelo[[nombre]]$validacion
+    
+    x_ent <- matriz_x(ent, formula_modelo)
+    x_val <- matriz_x(val, formula_modelo)
+    
+    stopifnot(
+      nrow(x_ent) == nrow(ent),
+      nrow(x_val) == nrow(val),
+      identical(colnames(x_ent), colnames(x_val))
+    )
+    
+    ajuste_log <- glmnet(
+      x = x_ent,
+      y = log1p(ent$pm25_futuro),
+      alpha = mejor_m1$alpha,
+      lambda = lambdas_log,
+      standardize = TRUE
+    )
+    
+    # Una columna de predicciones por cada lambda.
+    pred_log <- predict(
+      ajuste_log,
+      newx = x_val,
+      s = lambdas_log
+    )
+    
+    # Volver a la escala original: exp(predicción) - 1.
+    pred_original <- expm1(as.matrix(pred_log))
+    
+    errores <- sweep(
+      pred_original,
+      MARGIN = 1,
+      STATS = val$pm25_futuro,
+      FUN = "-"
+    )
+    
+    tibble(
+      Bloque = nombre,
+      lambda = lambdas_log,
+      n = nrow(val),
+      MAE = colMeans(abs(errores))
+    )
+  })
+)
+
+# 3. Elegir lambda por MAE conjunto de validación.
+# Ponderar por n equivale a dar igual peso a cada observación.
+
+seleccion_log <- resultados_log %>%
+  group_by(lambda) %>%
+  summarise(
+    MAE_validacion = weighted.mean(MAE, w = n),
+    .groups = "drop"
+  ) %>%
+  arrange(MAE_validacion)
+
+mejor_lambda_log <- seleccion_log$lambda[1]
+
+print(head(seleccion_log, 10))
+
+if (mejor_lambda_log %in% range(lambdas_log)) {
+  warning("El mejor lambda está en un extremo: conviene ampliar la grilla.")
+}
+
+# 4. Calcular el MAE del M1 original por bloque.
+# Se utilizan sus predicciones de validación ya disponibles.
+
+mae_original <- pred_validacion %>%
+  group_by(Bloque) %>%
+  summarise(
+    n_original = n(),
+    MAE_original = mean(abs(pm25_futuro - pred_M1)),
+    .groups = "drop"
+  )
+
+# 5. Comparar ambas representaciones por bloque.
+
+sensibilidad_log <- resultados_log %>%
+  filter(lambda == mejor_lambda_log) %>%
+  transmute(
+    Bloque,
+    n,
+    MAE_log = MAE
+  ) %>%
+  left_join(mae_original, by = "Bloque")
+
+# Ambas versiones deben haberse evaluado sobre las mismas filas.
+# Este chequeo verifica los tamaños; además, conservar las mismas
+# observaciones de validación al generar pred_validacion.
+stopifnot(
+  !anyNA(sensibilidad_log),
+  all(sensibilidad_log$n == sensibilidad_log$n_original)
+)
+
+sensibilidad_log <- sensibilidad_log %>%
+  mutate(
+    diferencia_log_menos_original = MAE_log - MAE_original
+  ) %>%
+  select(
+    Bloque, n, MAE_original, MAE_log,
+    diferencia_log_menos_original
+  )
+
+print(sensibilidad_log)
+
+# 6. Comparación global.
+
+resumen_sensibilidad_log <- sensibilidad_log %>%
+  summarise(
+    n = sum(n),
+    MAE_original = weighted.mean(MAE_original, w = n),
+    MAE_log = weighted.mean(MAE_log, w = n)
+  ) %>%
+  mutate(
+    diferencia_log_menos_original = MAE_log - MAE_original
+  )
+
+print(resumen_sensibilidad_log)
+
+
+# ------------------------------------------------------------
+# B. POBLACIÓN: TODOS LOS DÍAS VS SIN EPISODIOS ALTOS
+# ------------------------------------------------------------
+
+# Se mantienen las predicciones existentes.
+# No se reajustan ni se vuelven a seleccionar los modelos.
+# umbral_alto debe estar definido previamente, sin usar el test.
+
+stopifnot(
+  length(umbral_alto) == 1L,
+  is.finite(umbral_alto),
+  all(is.finite(pred_validacion$pm25_futuro))
+)
+
+pred_sin_altos <- pred_validacion %>%
+  filter(pm25_futuro < umbral_alto)
+
+if (nrow(pred_sin_altos) == 0L) {
+  stop("No hay observaciones por debajo de umbral_alto.")
+}
+
+# 1. Documentar cuántas observaciones se excluyen.
+
+resumen_poblacion <- pred_validacion %>%
+  summarise(
+    n_total = n(),
+    n_sin_episodios_altos = sum(pm25_futuro < umbral_alto),
+    n_episodios_altos = sum(pm25_futuro >= umbral_alto),
+    porcentaje_excluido = 100 * mean(pm25_futuro >= umbral_alto)
+  )
+
+print(resumen_poblacion)
+
+# 2. Comparar modelos en cada población.
+
 sensibilidad_poblacion <- bind_rows(
-  comparar_modelos(pred_validacion) %>% mutate(Escenario = "Todos los dias"),
-  comparar_modelos(filter(pred_validacion, pm25_futuro < umbral_alto)) %>%
+  comparar_modelos(pred_validacion) %>%
+    mutate(Escenario = "Todos los días"),
+  
+  comparar_modelos(pred_sin_altos) %>%
     mutate(Escenario = "Sin episodios altos")
 ) %>%
-  dplyr::select(Escenario, everything()) %>%
+  group_by(Escenario) %>%
+  mutate(Posicion_MAE = min_rank(MAE)) %>%
+  ungroup() %>%
+  select(Escenario, Posicion_MAE, everything()) %>%
   arrange(Escenario, MAE)
+
 print(sensibilidad_poblacion)
 
 # 10. PRUEBA FINAL SELLADA (2023-2024)
