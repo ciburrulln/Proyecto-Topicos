@@ -1,2 +1,17 @@
 Llamar datos a la carpeta 
 Ejecutar main.R
+
+
+
+
+
+
+
+
+
+
+Referencias:
+
+Fuente original: U.S. EPA AirData PM2.5 (88101) — dominio público
+Copia utilizada: caso02_epa_pm25.zip
+Edición/fecha de descarga: 12 de octubre de 2026
