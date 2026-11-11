@@ -20,20 +20,14 @@ niveles_estacion <- pm25_diario %>%
 niveles_estacion_ano <- pm25_diario %>%
   pull(estacion_ano) %>% as.character() %>% unique() %>% sort()
 
-# Factor de eventos: obtener niveles de los casos de desarrollo
-# con pm25_hoy y respuesta observados, sin examinar respuestas de prueba.
-niveles_evento <- pm25_diario %>%
-  filter(Date.Local + days(1) <= as.Date("2022-12-31"),
-         !is.na(pm25_hoy), !is.na(pm25_futuro)) %>%
-  pull(Event.Type) %>% as.character() %>% unique() %>% sort()
 
 # No está ultima_conc ni antiguedad_dias dado que usamos solo 
 # las observaciones completas
 
 predictores <- c(
-  "Station", "Event.Type",
+  "Station",
   "pm25_hoy", "pm25_lag1",
-  "mes_futuro", "mes",
+  "ano", "mes", "dia_semana",
   "estacion_ano"
 )
 variables_completas <- c("pm25_futuro", predictores)
@@ -43,9 +37,9 @@ datos_preparados <- pm25_diario %>%
   mutate(
     fecha_objetivo = Date.Local + days(1),
     Station = factor(as.character(Station), levels = niveles_estacion),
-    Event.Type = factor(as.character(Event.Type), levels = niveles_evento),
     mes = factor(as.character(mes), levels = as.character(1:12)),
-    mes_futuro = factor(as.character(mes_futuro), levels = as.character(1:12)),
+    dia_semana = dia_semana,
+    ano = as.factor(ano), 
     estacion_ano = factor(as.character(estacion_ano),
                           levels = c("Invierno", "Primavera", "Verano", "Otoño")),
     estacion_objetivo = case_when(
@@ -75,8 +69,8 @@ datos_modelo <- datos_preparados %>%
 
 
 # Formula comun: corresponde a la lista de predictores seleccionada.
-formula_modelo <- pm25_futuro ~ Station + Event.Type + pm25_hoy +
-  pm25_lag1 + mes_futuro + mes + estacion_ano
+formula_modelo <- pm25_futuro ~ Station + pm25_hoy +
+  pm25_lag1 + mes + ano + dia_semana + estacion_ano
 
 matriz_x <- function(datos, formula = formula_modelo) {
   model.matrix(formula, data = datos)[, -1, drop = FALSE]
