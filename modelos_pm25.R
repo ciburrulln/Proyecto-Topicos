@@ -317,14 +317,31 @@ print(errores_episodios)
 
 # Figura: error por temporada, con los cuatro metodos y sus denominadores.
 library(ggplot2)
-figura_temporada <- ggplot(errores_temporada,
-                           aes(x = estacion_objetivo, y = MAE,
-                               color = Modelo, group = Modelo)) +
-  geom_line() + geom_point(size = 2) +
-  labs(title = "Error de prediccion de PM2.5 por temporada",
-       x = "Estacion del ano del dia objetivo",
-       y = "MAE (microgramos/m3)", color = "Modelo") +
+figura_temporada <- errores_temporada %>%
+  mutate(
+    Modelo = recode(
+      Modelo,
+      "pred_M1" = "Lasso",
+      "pred_arbol" = "Árbol podado",
+      "pred_bosque" = "Bosque aleatorio",
+      "pred_persistencia" = "Persistencia"
+    )
+  ) %>%
+  ggplot(aes(
+    x = estacion_objetivo,
+    y = MAE,
+    color = Modelo,
+    group = Modelo
+  )) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2.5) +
+  labs(
+    x = "Estación del año",
+    y = "MAE (µg/m³)",
+    color = "Procedimiento"
+  ) +
   theme_minimal()
+
 print(figura_temporada)
 
 comparacion_estaciones <- errores_estacion %>%
