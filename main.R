@@ -1,3 +1,5 @@
+hora_inicial <- Sys.time()
+
 if(!require("pacman")){install.packages("pacman")}; library(pacman)
 pacman::p_load(MASS, here, dplyr, tidyr)
 
@@ -39,4 +41,7 @@ rm(
 
 source(here::here("modelos_pm25.R"))
 
-
+hora_final <- Sys.time()
+print(
+  paste0("Tiempo total de ejecucion: ", hora_final - hora_inicial, " segundos")
+)
