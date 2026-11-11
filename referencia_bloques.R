@@ -7,6 +7,8 @@ library(dplyr)
 
 #### FUNCIONES ####
 
+sum(is.na(pm25_diario$pm25_futuro))
+
 # Función para calcular métricas de referencia
 calcular_metricas_referencia <- function(datos) {
   
