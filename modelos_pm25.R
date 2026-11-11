@@ -33,26 +33,57 @@ predictores <- c(
 variables_completas <- c("pm25_futuro", predictores)
 
 
+
 datos_preparados <- pm25_diario %>%
   mutate(
     fecha_objetivo = Date.Local + days(1),
-    Station = factor(as.character(Station), levels = niveles_estacion),
-    mes = factor(as.character(mes), levels = as.character(1:12)),
-    dia_semana = dia_semana,
-    ano = year(ano), 
-    estacion_ano = factor(as.character(estacion_ano),
-                          levels = c("Invierno", "Primavera", "Verano", "Otoño")),
-    estacion_objetivo = case_when(
+    
+    Station = factor(
+      as.character(Station),
+      levels = niveles_estacion
+    ),
+    
+    # Año numérico del día que queremos predecir
+    ano = year(fecha_objetivo),
+    
+    # Mes del día que queremos predecir
+    mes = factor(
+      month(fecha_objetivo),
+      levels = 1:12
+    ),
+    
+    # Día de la semana del día objetivo
+    dia_semana = factor(
+      wday(fecha_objetivo, week_start = 1),
+      levels = 1:7,
+      labels = c(
+        "Lunes", "Martes", "Miercoles",
+        "Jueves", "Viernes", "Sabado", "Domingo"
+      )
+    ),
+    
+    # Estación del año en el hemisferio norte
+    estacion_ano = case_when(
       month(fecha_objetivo) %in% 3:5 ~ "Primavera",
       month(fecha_objetivo) %in% 6:8 ~ "Verano",
       month(fecha_objetivo) %in% 9:11 ~ "Otoño",
       TRUE ~ "Invierno"
     ),
-    estacion_objetivo = factor(estacion_objetivo,
-                               levels = c("Invierno", "Primavera", "Verano", "Otoño"))
+    
+    estacion_ano = factor(
+      estacion_ano,
+      levels = c(
+        "Invierno", "Primavera",
+        "Verano", "Otoño"
+      )
+    ),
+    
+    estacion_objetivo = estacion_ano
   ) %>%
-  filter(fecha_objetivo >= as.Date("2019-01-01"),
-         fecha_objetivo <= as.Date("2024-12-31"))
+  filter(
+    fecha_objetivo >= as.Date("2019-01-01"),
+    fecha_objetivo <= as.Date("2024-12-31")
+  )
 
 # Mostrar cuantas filas se pierden en DESARROLLO, sin mirar las respuestas de prueba.
 cobertura_desarrollo <- datos_preparados %>%
