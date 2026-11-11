@@ -1,3 +1,7 @@
+# Código desarrollado con apoyo de herramientas de IA.
+# Se utilizó IA para revisar, corregir y depurar el código.
+
+
 if(!require("pacman")){install.packages("pacman")}; library(pacman)
 pacman::p_load(here, tidyverse, lubridate)
 library(dplyr)

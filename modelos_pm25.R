@@ -1,3 +1,5 @@
+# Código desarrollado con apoyo de herramientas de IA.
+# Se utilizó IA para revisar, corregir y depurar el código.
 
 library(dplyr)
 library(tidyr)
